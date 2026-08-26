@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<!--
+    Copyright (c) 2026 John Talbot
+
+    Authored by John Talbot, with substantial assistance from Anthropic's
+    Claude and Google's Gemini. See the NOTICE file for details.
+
+    Licensed under the Apache License, Version 2.0 (the "License");
+    you may not use this file except in compliance with the License.
+    You may obtain a copy of the License at
+
+            http://www.apache.org/licenses/LICENSE-2.0
+
+    Unless required by applicable law or agreed to in writing, software
+    distributed under the License is distributed on an "AS IS" BASIS,
+    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+    See the License for the specific language governing permissions and
+    limitations under the License.
+-->
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="description" content="Check a character or a whole character table you have computed by hand: inner products, multiplicities, and the orthogonality relations.">
+    <title>Character Explorer</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="../homomorphisms/style.css">
+    <!-- MathJax for rendering math equations -->
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <style>
+        /* ── Student character checker (scoped to this page) ─────────────── */
+        .cc-tabs {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .cc-tab {
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            background: rgba(255, 255, 255, 0.05);
+            color: var(--text-secondary);
+            font-family: inherit;
+            font-size: 0.95rem;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .cc-tab[aria-selected="true"] {
+            background: rgba(52, 211, 153, 0.15);
+            border-color: #34d399;
+            color: #34d399;
+        }
+
+        table.cc-grid {
+            border-collapse: collapse;
+            font-size: 0.95rem;
+        }
+
+        table.cc-grid th {
+            color: var(--text-secondary);
+            font-size: 0.8rem;
+            font-weight: 600;
+            padding: 0.35rem 0.5rem;
+            text-align: center;
+            white-space: nowrap;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        table.cc-grid th.cc-rowhead {
+            text-align: right;
+            border-bottom: none;
+            border-right: 1px solid var(--border-color);
+            font-size: 0.95rem;
+            color: var(--text-primary);
+            /* Keep the row labels visible while a wide table scrolls sideways */
+            position: sticky;
+            left: 0;
+            background: var(--card-bg);
+        }
+
+        table.cc-grid td {
+            padding: 0.2rem 0.25rem;
+        }
+
+        table.cc-grid input[type="text"] {
+            width: 6.5rem;
+            padding: 0.45rem 0.5rem;
+            font-size: 0.95rem;
+            text-align: center;
+        }
+
+        table.cc-grid input.cc-bad {
+            border-color: var(--error);
+        }
+
+        .cc-size {
+            font-weight: normal;
+            font-size: 0.85em;
+            color: var(--text-secondary);
+        }
+
+        #cc-results-body table.char-table td.cc-ok {
+            color: var(--success);
+        }
+
+        #cc-results-body table.char-table td.cc-err {
+            color: var(--error);
+            font-weight: 600;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="app-container">
+        <header>
+            <a href="../tools.html" class="back-link">← Tools</a>
+            <h1>Character Explorer</h1>
+            <p class="subtitle">Check a character you have computed against the group</p>
+        </header>
+
+        <main>
+            <div class="input-section" style="border-color: #34d399;">
+                <h2 style="color: #34d399;">Group</h2>
+                <div class="control-group">
+                    <label for="char-group-select">Select a group</label>
+                    <div style="display:flex; gap: 0.5rem; align-items: stretch;">
+                        <select id="char-group-select" style="flex: 1;">
+                            <option value="">-- Choose a group --</option>
+                        </select>
+                        <button id="btn-show-group-char-table" class="btn primary hidden"
+                            style="padding: 0 1rem; white-space: nowrap;">Group Character Table</button>
+                    </div>
+                </div>
+                <p class="help-text" style="margin:-1rem 0 0; line-height:1.6;">
+                    Looking for the representations themselves — generator matrices, decompositions,
+                    change of basis? Those are in the
+                    <a href="../representations/index.html" style="color:#a78bfa; font-weight:600;">Representation Explorer</a>.
+                </p>
+            </div>
+
+            <div id="cc-section" class="input-section hidden" style="border-color:#34d399;">
+                <h2 style="color:#34d399;">Check your own character</h2>
+                <p class="help-text" style="margin:-1rem 0 0; line-height:1.6;">
+                    Computed a character by hand? Type it in below and have it checked. Columns are the
+                    conjugacy classes of \(G\), with the class size underneath the representative.
+                </p>
+                <div class="cc-tabs" role="tablist" aria-label="What to check">
+                    <button class="cc-tab" id="cc-tab-single" role="tab" aria-selected="true"
+                        data-mode="single">One character</button>
+                    <button class="cc-tab" id="cc-tab-table" role="tab" aria-selected="false"
+                        data-mode="table">Whole character table</button>
+                </div>
+                <div id="cc-grid-wrap" style="overflow-x:auto; margin:-0.5rem 0;"></div>
+                <div style="display:flex; gap:0.75rem; flex-wrap:wrap;">
+                    <button id="cc-check" class="btn primary">Check</button>
+                    <button id="cc-example" class="btn secondary">Example</button>
+                    <button id="cc-clear" class="btn secondary">Clear</button>
+                </div>
+                <p class="help-text" style="margin:-0.75rem 0 0; line-height:1.6;">
+                    Entries may be any complex expression: <code>-1</code>, <code>1/2</code>,
+                    <code>2i</code>, <code>1-i</code>, <code>sqrt5</code>, <code>(1+sqrt5)/2</code>,
+                    <code>2cos(2pi/5)</code>, <code>e^(2pi i/3)</code>. The shorthands
+                    <code>w</code> or <code>omega</code> (= \(e^{2\pi i/3}\)) and <code>phi</code>
+                    (= \((1+\sqrt5)/2\)) are recognised, as are <code>&#960;</code>,
+                    <code>&#8730;</code>, <code>&#969;</code> and <code>&#966;</code>.
+                </p>
+            </div>
+
+            <div id="cc-results" class="result-card full-width hidden">
+                <h3>Verdict</h3>
+                <div id="cc-results-body" style="line-height:1.8;"></div>
+
+            <!-- Modal for Group Character Table -->
+            <div id="char-table-modal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="modal-group-name">
+                <div class="modal" style="max-width: 900px; width: 95%;">
+                    <div class="modal-header">
+                        <h3 id="modal-group-name">Group Character Table</h3>
+                        <button class="close-btn" id="close-modal-btn" aria-label="Close dialog">&times;</button>
+                    </div>
+                    <div class="modal-body" style="overflow-x: auto;">
+                        <div id="modal-char-table-container"></div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="../group-utils.js"></script>
+    <script src="../presentations/script.js"></script>
+    <script src="../rep-core.js"></script>
+    <script src="script.js"></script>
+</body>
+
+</html>
