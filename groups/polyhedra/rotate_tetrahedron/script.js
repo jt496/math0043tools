@@ -43,11 +43,14 @@ const CONFIG = {
 
 // Tetrahedron vertices (regular tetrahedron centered at origin)
 // Using coordinates where vertices are at alternating corners of a cube
+// Labels follow the d4 dice exercise in the lecture notes:
+// 1 = (1,1,1), 2 = (1,-1,-1), 3 = (-1,-1,1), 4 = (-1,1,-1).
+// If you renumber these, the face index triples below must be renumbered to match.
 const VERTICES = [
     new THREE.Vector3(1, 1, 1),
     new THREE.Vector3(1, -1, -1),
-    new THREE.Vector3(-1, 1, -1),
-    new THREE.Vector3(-1, -1, 1)
+    new THREE.Vector3(-1, -1, 1),
+    new THREE.Vector3(-1, 1, -1)
 ];
 
 // Normalize for unit tetrahedron
@@ -59,12 +62,12 @@ const VERTEX_COLORS = ['#ff2200', '#0055ff', '#00ff66', '#ffcc00'];
 
 // Edge midpoint axes (pairs of opposite edges)
 // Edge 1: connects V1-V2 and V3-V4 (opposite edges)
-// Edge 2: connects V1-V3 and V2-V4 (opposite edges)
-// Edge 3: connects V1-V4 and V2-V3 (opposite edges)
+// Edge 2: connects V1-V4 and V2-V3 (opposite edges)
+// Edge 3: connects V1-V3 and V2-V4 (opposite edges)
 const EDGE_AXES = [
     new THREE.Vector3(1, 0, 0).normalize(),  // midpoint of 1-2 to midpoint of 3-4
-    new THREE.Vector3(0, 1, 0).normalize(),  // midpoint of 1-3 to midpoint of 2-4
-    new THREE.Vector3(0, 0, 1).normalize()   // midpoint of 1-4 to midpoint of 2-3
+    new THREE.Vector3(0, 1, 0).normalize(),  // midpoint of 1-4 to midpoint of 2-3
+    new THREE.Vector3(0, 0, 1).normalize()   // midpoint of 1-3 to midpoint of 2-4
 ];
 
 const EDGE_COLORS = ['#ff00ff', '#00ffff', '#76ff03'];
@@ -128,6 +131,22 @@ function init() {
     // 8. Event Listeners
     window.addEventListener('resize', onWindowResize);
     setupUI();
+    setupRepPanel();
+}
+
+// Matrix / character panel (hidden until the toggle is switched on).
+// The vertex coordinates above are the ones used in the d4 dice exercise in the
+// notes, so every rotation here is a signed permutation matrix and displays exactly.
+function setupRepPanel() {
+    if (!window.RepPanel) return;
+    RepPanel.attach({
+        groupName: 'A₄',
+        getQuaternion: () => targetQuaternion,
+        generators: [
+            ...VERTICES.map(v => ({ axis: [v.x, v.y, v.z], angle: 120 })),
+            ...EDGE_AXES.map(a => ({ axis: [a.x, a.y, a.z], angle: 180 }))
+        ]
+    });
 }
 
 function createTetrahedron() {
@@ -136,16 +155,13 @@ function createTetrahedron() {
     // Create geometry manually for per-face coloring
     const geometry = new THREE.BufferGeometry();
 
-    // Face definitions (vertex indices)
-    // Face 0: V1, V2, V3 (opposite to V4)
-    // Face 1: V1, V2, V4 (opposite to V3)
-    // Face 2: V1, V3, V4 (opposite to V2)
-    // Face 3: V2, V3, V4 (opposite to V1)
+    // Face definitions (vertex indices). The winding gives outward normals, so
+    // these triples track the vertex numbering above rather than being reordered.
     const faceIndices = [
-        [0, 2, 1], // Face opposite to vertex 4
-        [0, 1, 3], // Face opposite to vertex 3
-        [0, 3, 2], // Face opposite to vertex 2
-        [1, 2, 3]  // Face opposite to vertex 1
+        [0, 3, 1], // Face opposite to vertex 3
+        [0, 1, 2], // Face opposite to vertex 4
+        [0, 2, 3], // Face opposite to vertex 2
+        [1, 3, 2]  // Face opposite to vertex 1
     ];
 
     const positions = [];

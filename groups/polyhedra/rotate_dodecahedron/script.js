@@ -143,7 +143,25 @@ function init() {
     setupUI();
 
     window.addEventListener('resize', onWindowResize);
+    setupRepPanel();
 }
+
+// Matrix / character panel (hidden until the toggle is switched on).
+// Entries are +-1/2, +-phi/2 and +-(phi-1)/2, so the panel pulls out a factor
+// of 1/2 and prints them symbolically rather than as decimals.
+function setupRepPanel() {
+    if (!window.RepPanel) return;
+    RepPanel.attach({
+        groupName: 'A₅',
+        getQuaternion: () => targetQuaternion,
+        generators: [
+            ...FACE_AXES.map(a => ({ axis: [a.x, a.y, a.z], angle: 72 })),
+            ...VERTEX_AXES.map(a => ({ axis: [a.x, a.y, a.z], angle: 120 })),
+            ...EDGE_AXES.map(a => ({ axis: [a.x, a.y, a.z], angle: 180 }))
+        ]
+    });
+}
+
 
 function createFaceLabelMesh(text, fv, scale) {
     const centroid = new THREE.Vector3();

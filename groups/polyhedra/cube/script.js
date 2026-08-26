@@ -145,7 +145,26 @@ function init() {
     // 9. Event Listeners
     window.addEventListener('resize', onWindowResize);
     setupUI();
+    setupRepPanel();
 }
+
+// Matrix / character panel (hidden until the toggle is switched on).
+// The face rotations plus the mirror planes generate all 48 elements of O_h,
+// including the inversion -I.
+function setupRepPanel() {
+    if (!window.RepPanel) return;
+    RepPanel.attach({
+        groupName: 'S₄ × C₂',
+        getMatrix: () => targetMatrix,
+        generators: [
+            { axis: [1, 0, 0], angle: 90 },
+            { axis: [0, 1, 0], angle: 90 },
+            { axis: [0, 0, 1], angle: 90 },
+            ...MIRROR_PLANES.map(p => ({ normal: [p.normal.x, p.normal.y, p.normal.z] }))
+        ]
+    });
+}
+
 
 function createCube() {
     const geometry = new THREE.BoxGeometry(CONFIG.cubeSize, CONFIG.cubeSize, CONFIG.cubeSize);

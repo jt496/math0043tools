@@ -146,7 +146,25 @@ function init() {
     currentMatrix.identity();
     createCubes();
     createIcosahedronMesh();
+    setupRepPanel();
 }
+
+// Matrix / character panel (hidden until the toggle is switched on).
+// I_h: the 60 rotations together with the 15 mirror planes, 120 elements in all.
+function setupRepPanel() {
+    if (!window.RepPanel) return;
+    RepPanel.attach({
+        groupName: 'A₅ × C₂',
+        getMatrix: () => targetMatrix,
+        generators: [
+            ...FACE_AXES.map(a => ({ axis: [a.x, a.y, a.z], angle: 72 })),
+            ...VERTEX_AXES.map(a => ({ axis: [a.x, a.y, a.z], angle: 120 })),
+            ...EDGE_AXES.map(a => ({ axis: [a.x, a.y, a.z], angle: 180 })),
+            ...MIRROR_PLANES.map(p => ({ normal: [p.normal.x, p.normal.y, p.normal.z] }))
+        ]
+    });
+}
+
 
 function createFaceLabelMesh(text, fv, scale) {
     const centroid = new THREE.Vector3();

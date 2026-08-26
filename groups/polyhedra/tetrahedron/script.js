@@ -43,11 +43,14 @@ const CONFIG = {
 };
 
 // Tetrahedron vertices (regular tetrahedron centered at origin)
+// Labels follow the d4 dice exercise in the lecture notes:
+// 1 = (1,1,1), 2 = (1,-1,-1), 3 = (-1,-1,1), 4 = (-1,1,-1).
+// If you renumber these, the face index triples below must be renumbered to match.
 const VERTICES = [
     new THREE.Vector3(1, 1, 1),
     new THREE.Vector3(1, -1, -1),
-    new THREE.Vector3(-1, 1, -1),
-    new THREE.Vector3(-1, -1, 1)
+    new THREE.Vector3(-1, -1, 1),
+    new THREE.Vector3(-1, 1, -1)
 ];
 
 // Normalize for unit tetrahedron
@@ -71,13 +74,13 @@ const EDGE_COLORS = ['#ff00ff', '#00ffff', '#76ff03'];
 const MIRROR_PLANES = [
     // Plane through edge V1-V2 and midpoint of V3-V4
     { normal: new THREE.Vector3(0, 1, -1).normalize(), color: 0xff0000 },
-    // Plane through edge V1-V3 and midpoint of V2-V4
-    { normal: new THREE.Vector3(1, 0, -1).normalize(), color: 0xff6600 },
     // Plane through edge V1-V4 and midpoint of V2-V3
+    { normal: new THREE.Vector3(1, 0, -1).normalize(), color: 0xff6600 },
+    // Plane through edge V1-V3 and midpoint of V2-V4
     { normal: new THREE.Vector3(1, -1, 0).normalize(), color: 0xffee00 },
-    // Plane through edge V2-V3 and midpoint of V1-V4
-    { normal: new THREE.Vector3(1, 1, 0).normalize(), color: 0x00ee00 },
     // Plane through edge V2-V4 and midpoint of V1-V3
+    { normal: new THREE.Vector3(1, 1, 0).normalize(), color: 0x00ee00 },
+    // Plane through edge V2-V3 and midpoint of V1-V4
     { normal: new THREE.Vector3(1, 0, 1).normalize(), color: 0x00aaff },
     // Plane through edge V3-V4 and midpoint of V1-V2
     { normal: new THREE.Vector3(0, 1, 1).normalize(), color: 0xcc00ff }
@@ -159,7 +162,25 @@ function init() {
     // 9. Event Listeners
     window.addEventListener('resize', onWindowResize);
     setupUI();
+    setupRepPanel();
 }
+
+// Matrix / character panel (hidden until the toggle is switched on).
+// T_d contains reflections as well as rotations, so the panel reads the full
+// 4x4 transform rather than a quaternion.
+function setupRepPanel() {
+    if (!window.RepPanel) return;
+    RepPanel.attach({
+        groupName: 'S₄',
+        getMatrix: () => targetMatrix,
+        generators: [
+            ...VERTICES.map(v => ({ axis: [v.x, v.y, v.z], angle: 120 })),
+            ...EDGE_AXES.map(a => ({ axis: [a.x, a.y, a.z], angle: 180 })),
+            ...MIRROR_PLANES.map(p => ({ normal: [p.normal.x, p.normal.y, p.normal.z] }))
+        ]
+    });
+}
+
 
 function createTetrahedron() {
     tetrahedron = new THREE.Group();
@@ -167,11 +188,12 @@ function createTetrahedron() {
     // Create geometry manually for per-face coloring
     const geometry = new THREE.BufferGeometry();
 
+    // Winding gives outward normals; these track the vertex numbering above.
     const faceIndices = [
-        [0, 2, 1],
-        [0, 1, 3],
-        [0, 3, 2],
-        [1, 2, 3]
+        [0, 3, 1], // opposite to vertex 3
+        [0, 1, 2], // opposite to vertex 4
+        [0, 2, 3], // opposite to vertex 2
+        [1, 3, 2]  // opposite to vertex 1
     ];
 
     const positions = [];

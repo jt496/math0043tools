@@ -110,7 +110,24 @@ function init() {
     // 9. Event Listeners
     window.addEventListener('resize', onWindowResize);
     setupUI();
+    setupRepPanel();
 }
+
+// Matrix / character panel (hidden until the toggle is switched on).
+// The three face axes at 90 degrees already generate all 24 rotations.
+function setupRepPanel() {
+    if (!window.RepPanel) return;
+    RepPanel.attach({
+        groupName: 'S₄',
+        getMatrix: () => targetMatrix,
+        generators: [
+            { axis: [1, 0, 0], angle: 90 },
+            { axis: [0, 1, 0], angle: 90 },
+            { axis: [0, 0, 1], angle: 90 }
+        ]
+    });
+}
+
 
 function createCube() {
     const geometry = new THREE.BoxGeometry(CONFIG.cubeSize, CONFIG.cubeSize, CONFIG.cubeSize);
