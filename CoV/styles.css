@@ -870,7 +870,14 @@
                 display: block !important;
             }
 
+            /* Only slides marked .active print. prepareForPrint() adds .active
+               to the slides listed in slideOrder, so slides disabled there stay
+               out of the printed/PDF output. */
             .slide {
+                display: none !important;
+            }
+
+            .slide.active {
                 position: relative !important;
                 display: flex !important;
                 flex-direction: column !important;

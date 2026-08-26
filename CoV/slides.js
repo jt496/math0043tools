@@ -112,7 +112,7 @@ function toggleBlackout() {
 function toggleFragmentMode() {
     fragmentModeEnabled = !fragmentModeEnabled;
     const btn = document.getElementById('fragmentToggle');
-    btn.classList.toggle('active', fragmentModeEnabled);
+    if (btn) btn.classList.toggle('active', fragmentModeEnabled);
 
     if (!fragmentModeEnabled) {
         // Show all fragments on current slide
@@ -467,8 +467,9 @@ function nextSlide() {
             showAllFragments(currentSlide);
         }
     }
-    // Update next button state
-    document.getElementById('nextBtn').disabled = (currentSlide === totalSlides && (!fragmentModeEnabled || getVisibleFragmentCount(currentSlide) === getSlideFragments(currentSlide).length));
+    // Update next button state (nav bar may be commented out, so guard)
+    const nextBtnEl = document.getElementById('nextBtn');
+    if (nextBtnEl) nextBtnEl.disabled = (currentSlide === totalSlides && (!fragmentModeEnabled || getVisibleFragmentCount(currentSlide) === getSlideFragments(currentSlide).length));
 }
 
 function prevSlide() {
@@ -498,25 +499,25 @@ function prepareForPrint() {
         toggleFragmentMode();
     }
 
-    // Force display all slides and reveal all fragments
-    document.querySelectorAll('.slide').forEach((slide, index) => {
-        slide.style.display = 'block';
+    // Reveal every slide listed in slideOrder. Slides commented out of
+    // slideOrder are deliberately excluded, so they stay out of the PDF.
+    slideOrder.forEach((id, i) => {
+        const slide = document.querySelector(`.slide[data-slide="${id}"]`);
+        if (!slide) return;
         slide.style.opacity = '1';
         slide.classList.add('active');
-        showAllFragments(index + 1);
-        initSlideContent(index + 1);
+        showAllFragments(i + 1);
+        initSlideContent(i + 1);
     });
 
     // Give some time for plots/mathjax to render before opening dialog
     setTimeout(() => {
         window.print();
         // Restore current slide visibility after printing dialog is closed
-        document.querySelectorAll('.slide').forEach((slide, index) => {
+        document.querySelectorAll('.slide').forEach((slide) => {
             slide.style.display = '';
             slide.style.opacity = '';
-            if (index + 1 !== currentSlide) {
-                slide.classList.remove('active');
-            }
+            slide.classList.remove('active');
         });
         showSlide(currentSlide);
     }, 3000);
@@ -571,7 +572,6 @@ document.addEventListener('keydown', (e) => {
     }
 });
 
-// Initialize slide content
 // Initialize slide content
 function initSlideContent(n) {
     // Map numeric index to ID if necessary
