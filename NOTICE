@@ -1,0 +1,16 @@
+Visualisations and Tools for MATH0043
+Copyright (c) 2026 John Talbot
+
+This product includes software developed by John Talbot for the MATH0043
+Mathematics for Physics and Astronomy module at University College London.
+
+Portions of this work were produced with substantial assistance from
+generative AI tools, namely Anthropic's Claude and Google's Gemini. The
+work was directed, reviewed and edited by John Talbot, in whom copyright
+in the human-authored contributions vests.
+
+Third-party components:
+
+  Three.js — used for 3D visualisations.
+  Copyright (c) 2010-2026 three.js authors
+  Licensed under the MIT License. See https://threejs.org/
