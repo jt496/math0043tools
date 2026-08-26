@@ -18,7 +18,8 @@ Ranked by value per hour of work:
 
 1. [x] Rotation matrices and characters on the polyhedra pages (§Representations, item 1)
       — shared module `groups/polyhedra/rep-panel.js`, wired into all six pages
-2. [ ] Euler–Lagrange stationarity explorer — plot *I*(ε) (§Calculus of Variations, item 1)
+2. [x] Euler–Lagrange stationarity explorer — plot *I*(ε) (§Calculus of Variations, item 1)
+      — `CoV/euler_lagrange.html`
 3. [ ] Standalone conjugacy class explorer (§Group theory, item 1)
 4. [ ] User-entered characters in the Representation Explorer (§Representations, item 4)
 
@@ -26,7 +27,12 @@ Ranked by value per hour of work:
 
 ## Calculus of Variations
 
-- [ ] **Euler–Lagrange stationarity explorer** — the biggest single gap.
+- [x] **Euler–Lagrange stationarity explorer** — the biggest single gap. *Done: `CoV/euler_lagrange.html`.
+      Four functionals (the three §1.3 exercises plus ∫(y′)³ for the necessary-not-sufficient case),
+      right/wrong candidates, four variations, an ε slider, and a second panel plotting I(ε) with the
+      tangent at ε=0. The first variation is computed exactly from ∫(F_y η + F_y′ η′)dx, and a tally
+      reports how many of the variations give δI = 0 — so "stationary for one η" never reads as
+      "solves Euler–Lagrange".*
       The slides plot `y + εη` (`CoV/slides.js:2155`) but never plot *I*(ε), even though the whole
       proof in notes §1.3 hinges on `dI/dε|₀ = 0`. Menu of *F* (arclength; ∫₀¹(y′−y)²; ∫₁²x²(y′)²+y —
       the three worked exercises in §1.3), a candidate *f*, a choice of η, an ε slider, and a second

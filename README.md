@@ -12,6 +12,8 @@ These visualisations let you explore examples, computations and concepts from gr
 
 ### ∫ Calculus of Variations (`CoV/`)
 - **Lecture slides** — the theory, history and applications of the calculus of variations
+- **Euler–Lagrange equation** — perturb a candidate by εη and watch I(ε): why an extremal is a
+  stationary point, why a wrong candidate is not, and why one variation is never enough
 - **Lagrange multipliers** — constrained optimisation in 3D, and the geometry behind ∇f = λ∇g
 - **Brachistochrone** — the path of quickest descent under gravity, and its cycloid solution
 - **Soap bubbles** — catenoids and the minimal surface problem between two rings, including the stable, unstable and Goldschmidt solutions

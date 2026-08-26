@@ -1,0 +1,751 @@
+<!DOCTYPE html>
+<!--
+    Copyright (c) 2026 John Talbot
+
+    Authored by John Talbot, with substantial assistance from Anthropic's
+    Claude and Google's Gemini. See the NOTICE file for details.
+
+    Licensed under the Apache License, Version 2.0 (the "License");
+    you may not use this file except in compliance with the License.
+    You may obtain a copy of the License at
+
+            http://www.apache.org/licenses/LICENSE-2.0
+
+    Unless required by applicable law or agreed to in writing, software
+    distributed under the License is distributed on an "AS IS" BASIS,
+    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+    See the License for the specific language governing permissions and
+    limitations under the License.
+-->
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>The Euler-Lagrange Equation</title>
+    <meta name="description"
+        content="See why the Euler-Lagrange equation is a stationarity condition: perturb a candidate by an amount of a variation and watch the functional as a function of that amount." />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js" async></script>
+    <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+    <style>
+        :root {
+            --primary: #eebb22;
+            --primary-hover: #ffcc33;
+            --bg-dark: #0f1115;
+            --panel-bg: rgba(20, 24, 30, 0.95);
+            --text-main: #e2e8f0;
+            --text-muted: #94a3b8;
+            --accent-red: #ff5555;
+            --accent-green: #4ade80;
+            --accent-blue: #60a5fa;
+            --accent-purple: #a855f7;
+            --border: rgba(255, 255, 255, 0.1);
+        }
+
+        body {
+            margin: 0;
+            background-color: var(--bg-dark);
+            color: var(--text-main);
+            font-family: 'Inter', sans-serif;
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        #sidebar, #controls {
+            flex-shrink: 0;
+            background: var(--panel-bg);
+            z-index: 10;
+            overflow-y: auto;
+        }
+
+        #sidebar {
+            width: 400px;
+            padding: 30px;
+            box-shadow: 4px 0 20px rgba(0, 0, 0, 0.6);
+            border-right: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        /* The controls live beside the plots, so the readouts and the verdict
+           sit next to the curves they are describing. */
+        #controls {
+            width: 330px;
+            padding: 24px 22px;
+            box-shadow: -4px 0 20px rgba(0, 0, 0, 0.6);
+            border-left: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        #controls .control-group:first-child { margin-top: 0; }
+
+        #sidebar::-webkit-scrollbar, #controls::-webkit-scrollbar { width: 8px; }
+        #sidebar::-webkit-scrollbar-thumb, #controls::-webkit-scrollbar-thumb {
+            background-color: rgba(255, 255, 255, 0.2);
+            border-radius: 4px;
+        }
+
+        #plot-container {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            background-color: var(--bg-dark);
+            height: 100vh;
+            min-width: 0;
+        }
+
+        #curve-plot, #energy-plot { flex: 1; width: 100%; min-height: 0; }
+        #curve-plot { border-bottom: 1px solid rgba(255, 255, 255, 0.05); }
+
+        h1 {
+            font-size: 2rem;
+            font-weight: 800;
+            color: var(--primary);
+            margin: 0 0 20px 0;
+            letter-spacing: -0.5px;
+        }
+
+        h3 {
+            font-size: 1.15rem;
+            color: var(--text-main);
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 8px;
+            margin-top: 30px;
+        }
+
+        p, li {
+            font-size: 1.02rem;
+            line-height: 1.6;
+            color: var(--text-main);
+            margin-bottom: 14px;
+        }
+
+        .control-group {
+            margin-top: 22px;
+            background: rgba(0, 0, 0, 0.3);
+            padding: 20px;
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        .control-group label {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+            color: var(--text-muted);
+            font-weight: 600;
+            font-size: 1rem;
+            align-items: center;
+        }
+
+        select {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 18px;
+            background: rgba(0, 0, 0, 0.45);
+            color: var(--text-main);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            font-family: inherit;
+            font-size: 0.98rem;
+            cursor: pointer;
+        }
+
+        select:focus { outline: 2px solid var(--primary); }
+        select:last-child { margin-bottom: 0; }
+
+        input[type=range] {
+            width: 100%;
+            accent-color: var(--primary);
+            height: 8px;
+            border-radius: 4px;
+            outline: none;
+            margin-bottom: 6px;
+            cursor: pointer;
+        }
+
+        .readout {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            padding: 9px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+            font-size: 1rem;
+        }
+
+        .readout:last-child { border-bottom: none; }
+        .readout .k { color: var(--text-muted); }
+        .readout .v {
+            font-family: 'Courier New', monospace;
+            font-weight: bold;
+            font-size: 1.1rem;
+            color: var(--text-main);
+        }
+
+        .verdict {
+            margin-top: 16px;
+            padding: 14px;
+            border-radius: 8px;
+            font-size: 1rem;
+            line-height: 1.5;
+            border-left: 4px solid var(--text-muted);
+            background: rgba(255, 255, 255, 0.04);
+        }
+
+        .verdict.good { border-left-color: var(--accent-green); background: rgba(74, 222, 128, 0.08); }
+        .verdict.bad { border-left-color: var(--accent-red); background: rgba(255, 85, 85, 0.08); }
+        .verdict.warn { border-left-color: var(--primary); background: rgba(238, 187, 34, 0.08); }
+        .verdict strong { color: var(--text-main); }
+
+        .back-link {
+            display: inline-block;
+            margin-bottom: 20px;
+            color: var(--accent-blue);
+            text-decoration: none;
+            font-weight: 600;
+        }
+
+        .back-link:hover { text-decoration: underline; }
+
+        .note {
+            font-size: 0.92rem;
+            color: var(--text-muted);
+            line-height: 1.55;
+        }
+
+        .eq {
+            background: rgba(0, 0, 0, 0.35);
+            border-radius: 8px;
+            padding: 14px;
+            margin: 14px 0;
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            /* A wide equation scrolls sideways. This also makes the box a
+               scrolling container, which is why the margins below are zeroed:
+               a child's block margins count towards scrollHeight here, and the
+               box would grow a spurious vertical scrollbar (or, if clipped,
+               cut the taller displays off top and bottom). */
+            overflow-x: auto;
+        }
+
+        /* Space comes from the box's padding instead of MathJax's own margins. */
+        .eq mjx-container[display] { margin: 0 !important; }
+
+        /* Below three-column width, drop the prose under the plots but keep the
+           controls next to them for as long as there is room. */
+        @media (max-width: 1250px) {
+            body { flex-wrap: wrap; height: auto; overflow: auto; }
+            #plot-container { height: 88vh; order: 1; flex: 1 1 460px; }
+            #controls { order: 2; height: 88vh; }
+            #sidebar {
+                order: 3; width: auto; flex: 1 1 100%; height: auto;
+                border-right: none; border-top: 1px solid rgba(255, 255, 255, 0.05);
+                box-shadow: none;
+            }
+        }
+
+        @media (max-width: 780px) {
+            body { flex-direction: column; }
+            #plot-container { height: 80vh; }
+            #controls { width: auto; height: auto; border-left: none; box-shadow: none; }
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Left: the explanation. Middle: the plots. Right: everything you touch,
+         kept beside the plots so the readouts sit next to what they describe. -->
+    <div id="sidebar">
+        <a href="index.html" class="back-link">&larr; Back to CoV Home</a>
+        <h1>Is it stationary?</h1>
+
+        <p>The Euler&ndash;Lagrange equation comes from a single idea: if \(f\) really is an extremal of
+            \(I[y]\), then nudging it in <em>any</em> admissible direction cannot decrease \(I\) to first order.</p>
+
+        <p>Fix a variation \(\eta\) with \(\eta(a)=\eta(b)=0\) and set \(y = f + \varepsilon\eta\). Then \(I\)
+            becomes an ordinary function of one variable \(\varepsilon\), and the condition is:</p>
+
+        <div class="eq">\[ \left.\frac{dI}{d\varepsilon}\right|_{\varepsilon=0} = 0. \]</div>
+
+        <p>Pick a problem, a candidate and a variation in the panel on the right, then drag \(\varepsilon\).
+            The lower plot is \(I(\varepsilon)\). <strong>For an extremal, it should be flat at the origin.</strong></p>
+
+        <h3>Why every \(\eta\) matters</h3>
+        <p class="note">Stationarity in one direction is not enough. The Euler&ndash;Lagrange equation is
+            equivalent to \(\delta I = 0\) for <em>every</em> admissible \(\eta\) &mdash; that is exactly what the
+            Fundamental Lemma needs in order to conclude anything about \(f\) itself.</p>
+
+        <h3>The first variation</h3>
+        <p class="note">The slope \(\delta I\) in the panel is the quantity that appears in the middle of the
+            proof, just before the integration by parts:</p>
+        <div class="eq">
+            \[ \delta I = \int_a^b \left( \frac{\partial F}{\partial y}\,\eta
+            + \frac{\partial F}{\partial y'}\,\eta' \right) dx \]
+        </div>
+        <p class="note">Requiring it to vanish for every admissible \(\eta\) is what yields the
+            Euler&ndash;Lagrange equation.</p>
+
+        <h3>This problem</h3>
+        <p class="note" id="problem-note"></p>
+    </div>
+
+    <div id="plot-container">
+        <div id="curve-plot"></div>
+        <div id="energy-plot"></div>
+    </div>
+
+    <div id="controls">
+        <div class="control-group">
+            <label for="problem-select"><span>Functional \(I[y]\)</span></label>
+            <select id="problem-select"></select>
+
+            <label for="candidate-select"><span>Candidate \(f\)</span></label>
+            <select id="candidate-select"></select>
+
+            <label for="eta-select"><span>Variation \(\eta\)</span></label>
+            <select id="eta-select"></select>
+        </div>
+
+        <div class="control-group">
+            <label for="eps-slider">
+                <span>Perturbation \(\varepsilon\)</span>
+                <span id="eps-display" style="color: var(--primary); font-size: 1.2rem;">0.00</span>
+            </label>
+            <input type="range" id="eps-slider" min="-1" max="1" step="0.005" value="0">
+
+            <div style="margin-top: 14px;">
+                <div class="readout"><span class="k">\(I[f]\) &nbsp;(at \(\varepsilon=0\))</span>
+                    <span class="v" id="out-i0">&mdash;</span></div>
+                <div class="readout"><span class="k">\(I[f+\varepsilon\eta]\)</span>
+                    <span class="v" id="out-ieps">&mdash;</span></div>
+                <div class="readout"><span class="k">\(\delta I = dI/d\varepsilon\big|_0\)</span>
+                    <span class="v" id="out-slope">&mdash;</span></div>
+            </div>
+
+            <div id="verdict" class="verdict">&mdash;</div>
+        </div>
+
+        <div class="control-group">
+            <label><span>Across all \(\eta\)</span></label>
+            <div id="all-eta" class="verdict" style="margin-top: 0;">&mdash;</div>
+        </div>
+    </div>
+
+    <script>
+        'use strict';
+
+        // ── Numerics ─────────────────────────────────────────────────────────
+        // Composite Simpson. n must be even; these integrands are smooth, so a
+        // couple of thousand panels puts us near machine precision.
+        function simpson(g, a, b, n) {
+            n = n || 2000;
+            const h = (b - a) / n;
+            let s = g(a) + g(b);
+            for (let i = 1; i < n; i++) s += g(a + i * h) * (i % 2 ? 4 : 2);
+            return s * h / 3;
+        }
+
+        // Variations, defined on t in [0,1], vanishing at both ends and
+        // normalised so that max|eta| = 1. Derivatives are analytic.
+        // Each eta is written once in the normalised coordinate u = (x−a)/(b−a),
+        // so that one definition serves every interval. The menu, though, has to
+        // read as a function of x: on [1,2] the first one below is sin(π(x−1)),
+        // not sin(πx), and showing "t" would just be leaking an internal variable.
+        const ETAS = [
+            { id: 'sin',  tag: 'one bump',
+              tex: c => 'sin(π' + c.par + ')',
+              v: u => Math.sin(Math.PI * u),
+              d: u => Math.PI * Math.cos(Math.PI * u) },
+            { id: 'sin2', tag: 'up then down',
+              tex: c => 'sin(2π' + c.par + ')',
+              v: u => Math.sin(2 * Math.PI * u),
+              d: u => 2 * Math.PI * Math.cos(2 * Math.PI * u) },
+            { id: 'poly', tag: 'parabolic',
+              tex: c => '4' + c.par + '(' + c.rest + ')',
+              v: u => 4 * u * (1 - u),
+              d: u => 4 - 8 * u },
+            { id: 'skew', tag: 'lopsided',
+              tex: c => '(27/4)' + c.par + '(' + c.rest + ')²',
+              v: u => (27 / 4) * u * (1 - u) * (1 - u),
+              d: u => (27 / 4) * ((1 - u) * (1 - u) - 2 * u * (1 - u)) }
+        ];
+
+        /**
+         * How to write u = (x−a)/(b−a) and 1−u in terms of x on [a,b].
+         *   par  — u, parenthesised where it needs to be (follows π, or a factor)
+         *   rest — 1−u, already simplified: on [1,2] that is 2−x, not 1−(x−1)
+         */
+        function coords(a, b) {
+            const L = b - a;
+            if (L === 1) {
+                return a === 0
+                    ? { par: 'x', rest: '1−x' }
+                    : { par: '(x−' + a + ')', rest: (a + 1) + '−x' };
+            }
+            const u = '(x−' + a + ')/' + L;
+            return { par: '(' + u + ')', rest: '1−' + u };
+        }
+
+        // Each problem carries F and its two partial derivatives, so the first
+        // variation is an exact integral rather than a difference quotient.
+        const PROBLEMS = [
+            {
+                id: 'arclength',
+                label: "Arc length:  ∫₀¹ √(1+(y′)²) dx,  y(0)=0, y(1)=1",
+                tex: 'I[y]=\\int_0^1\\sqrt{1+(y\')^2}\\,dx,\\quad y(0)=0,\;y(1)=1',
+                a: 0, b: 1,
+                F:  (x, y, p) => Math.sqrt(1 + p * p),
+                Fy: () => 0,
+                Fp: (x, y, p) => p / Math.sqrt(1 + p * p),
+                note: 'The shortest-path problem of §1.2. \\(F\\) has no explicit \\(y\\), so ' +
+                      '\\(\\partial F/\\partial y=0\\) and the Euler\u2013Lagrange equation reduces to ' +
+                      '\\(\\partial F/\\partial y\'=\\text{const}\\), forcing \\(y\'\\) constant.',
+                cands: [
+                    { label: 'y = x   (the extremal)', extremal: true, f: x => x, fp: () => 1 },
+                    { label: 'y = x²', f: x => x * x, fp: x => 2 * x },
+                    { label: 'y = x + 0.3 sin(πx)',
+                      f: x => x + 0.3 * Math.sin(Math.PI * x),
+                      fp: x => 1 + 0.3 * Math.PI * Math.cos(Math.PI * x) }
+                ]
+            },
+            {
+                id: 'sinh',
+                label: "∫₀¹ (y′−y)² dx,  y(0)=0, y(1)=2",
+                tex: 'I[y]=\\int_0^1 (y\'-y)^2\\,dx,\\quad y(0)=0,\;y(1)=2',
+                a: 0, b: 1,
+                F:  (x, y, p) => (p - y) * (p - y),
+                Fy: (x, y, p) => -2 * (p - y),
+                Fp: (x, y, p) => 2 * (p - y),
+                note: 'The exercise from §1.3. Solving the Euler\u2013Lagrange equation gives ' +
+                      '\\(y\'\'=y\\), hence \\(y = 2\\sinh x/\\sinh 1\\).',
+                cands: [
+                    { label: 'y = 2 sinh(x)/sinh(1)   (the extremal)', extremal: true,
+                      f: x => 2 * Math.sinh(x) / Math.sinh(1),
+                      fp: x => 2 * Math.cosh(x) / Math.sinh(1) },
+                    { label: 'y = 2x   (straight line)', f: x => 2 * x, fp: () => 2 },
+                    { label: 'y = 2x²', f: x => 2 * x * x, fp: x => 4 * x }
+                ]
+            },
+            {
+                id: 'logx',
+                label: "∫₁² x²(y′)² + y dx,  y(1)=y(2)=1",
+                tex: 'I[y]=\\int_1^2 x^2(y\')^2+y\\,dx,\\quad y(1)=1,\;y(2)=1',
+                a: 1, b: 2,
+                F:  (x, y, p) => x * x * p * p + y,
+                Fy: () => 1,
+                Fp: (x, y, p) => 2 * x * x * p,
+                note: 'The third exercise from §1.3, with extremal ' +
+                      '\\(y=\\tfrac12\\ln x+\\tfrac{\\ln 2}{x}+1-\\ln 2\\). ' +
+                      'Try the constant candidate with \\(\\eta=\\sin(2\\pi t)\\): the slope vanishes ' +
+                      'even though the candidate is wrong.',
+                cands: [
+                    { label: '½ln x + (ln2)/x + 1 − ln2   (the extremal)', extremal: true,
+                      f: x => 0.5 * Math.log(x) + Math.LN2 / x + 1 - Math.LN2,
+                      fp: x => 1 / (2 * x) - Math.LN2 / (x * x) },
+                    { label: 'y = 1   (constant)', f: () => 1, fp: () => 0 },
+                    { label: 'y = 1 + sin(π(x−1))',
+                      f: x => 1 + Math.sin(Math.PI * (x - 1)),
+                      fp: x => Math.PI * Math.cos(Math.PI * (x - 1)) }
+                ]
+            },
+            {
+                id: 'cubic',
+                label: "∫₀¹ (y′)³ dx,  y(0)=y(1)=0    (necessary ≠ sufficient)",
+                tex: 'I[y]=\\int_0^1 (y\')^3\\,dx,\\quad y(0)=y(1)=0',
+                a: 0, b: 1,
+                F:  (x, y, p) => p * p * p,
+                Fy: () => 0,
+                Fp: (x, y, p) => 3 * p * p,
+                defaultEta: 'skew',
+                note: 'Here \\(y=0\\) solves the Euler\u2013Lagrange equation, yet \\(I(\\varepsilon)\\) ' +
+                      'behaves like \\(\\varepsilon^3\\): stationary at the origin but taking both signs ' +
+                      'arbitrarily close to it. This is the functional version of \\(g(x)=x^3\\) at ' +
+                      '\\(x=0\\), and it is why the Euler\u2013Lagrange equation is only a <em>necessary</em> ' +
+                      'condition. The symmetric variations give \\(I\\equiv 0\\); the lopsided one does not.',
+                cands: [
+                    { label: 'y = 0   (solves E–L)', extremal: true, f: () => 0, fp: () => 0 }
+                ]
+            }
+        ];
+
+        // ── State ────────────────────────────────────────────────────────────
+        let problem = PROBLEMS[0];
+        let candidate = problem.cands[0];
+        let eta = ETAS[0];
+        let epsilon = 0;
+
+        const $ = id => document.getElementById(id);
+
+        // y and y' of the perturbed curve at x
+        function perturbed(x, eps) {
+            const L = problem.b - problem.a, u = (x - problem.a) / L;
+            return [candidate.f(x) + eps * eta.v(u),
+                    candidate.fp(x) + eps * eta.d(u) / L];
+        }
+
+        function functional(eps) {
+            return simpson(x => {
+                const yv = perturbed(x, eps);
+                return problem.F(x, yv[0], yv[1]);
+            }, problem.a, problem.b);
+        }
+
+        /**
+         * The first variation, straight from the proof of the Euler-Lagrange
+         * equation before the integration by parts:
+         *     delta-I = integral of (F_y * eta + F_y' * eta') dx.
+         * Exact to rounding, which matters: a difference quotient would return
+         * ~1e-5 for the cubic problem and blur the very distinction being shown.
+         */
+        function firstVariation(cand, et) {
+            const L = problem.b - problem.a;
+            return simpson(x => {
+                const u = (x - problem.a) / L, y = cand.f(x), p = cand.fp(x);
+                return problem.Fy(x, y, p) * et.v(u)
+                     + problem.Fp(x, y, p) * et.d(u) / L;
+            }, problem.a, problem.b);
+        }
+
+        const ZERO = 1e-8;   // exact values land near 1e-16, genuine ones near 1e-1
+
+        // ── Plots ────────────────────────────────────────────────────────────
+        const LAYOUT = {
+            paper_bgcolor: '#0f1115',
+            plot_bgcolor: '#0f1115',
+            font: { color: '#e2e8f0', family: 'Inter, sans-serif', size: 13 },
+            margin: { t: 44, r: 24, b: 48, l: 62 },
+            xaxis: { gridcolor: 'rgba(255,255,255,0.08)', zerolinecolor: 'rgba(255,255,255,0.25)' },
+            yaxis: { gridcolor: 'rgba(255,255,255,0.08)', zerolinecolor: 'rgba(255,255,255,0.25)' },
+            legend: { bgcolor: 'rgba(0,0,0,0.35)', bordercolor: 'rgba(255,255,255,0.1)', borderwidth: 1 }
+        };
+        const CONFIG = { responsive: true, displayModeBar: false };
+
+        function clone(o) { return JSON.parse(JSON.stringify(o)); }
+
+        function drawCurves() {
+            const a = problem.a, b = problem.b, M = 400;
+            const xs = [], base = [], pert = [];
+            for (let i = 0; i <= M; i++) {
+                const x = a + (b - a) * i / M;
+                xs.push(x);
+                base.push(candidate.f(x));
+                pert.push(perturbed(x, epsilon)[0]);
+            }
+            const lay = clone(LAYOUT);
+            lay.title = { text: 'The curves:  y = f + εη', font: { size: 15 } };
+            lay.xaxis.title = { text: 'x' };
+            lay.yaxis.title = { text: 'y' };
+            lay.showlegend = true;
+            lay.legend.x = 0.02;
+            lay.legend.y = 0.98;
+
+            Plotly.react('curve-plot', [
+                { x: xs, y: base, mode: 'lines', name: 'f (candidate)',
+                  line: { color: '#60a5fa', width: 2, dash: 'dash' } },
+                { x: xs, y: pert, mode: 'lines', name: 'f + εη',
+                  line: { color: '#eebb22', width: 3 } },
+                { x: [a, b], y: [candidate.f(a), candidate.f(b)], mode: 'markers',
+                  name: 'endpoints', marker: { color: '#4ade80', size: 11 } }
+            ], lay, CONFIG);
+        }
+
+        function drawEnergy() {
+            const M = 240, lo = -1, hi = 1;
+            const es = [], Is = [];
+            for (let i = 0; i <= M; i++) {
+                const e = lo + (hi - lo) * i / M;
+                es.push(e);
+                Is.push(functional(e));
+            }
+            const I0 = functional(0);
+            const slope = firstVariation(candidate, eta);
+
+            // Tangent at the origin: the whole point of the picture.
+            const tx = [lo, hi], ty = [I0 + slope * lo, I0 + slope * hi];
+
+            const lay = clone(LAYOUT);
+            lay.title = { text: 'The functional:  I(ε) = I[f + εη]', font: { size: 15 } };
+            lay.xaxis.title = { text: 'ε' };
+            lay.yaxis.title = { text: 'I(ε)' };
+            lay.showlegend = true;
+            lay.legend.x = 0.02;
+            lay.legend.y = 0.98;
+
+            // keep the tangent from stretching the y-range off the screen
+            const lo_I = Math.min.apply(null, Is), hi_I = Math.max.apply(null, Is);
+            const pad = Math.max((hi_I - lo_I) * 0.15, 1e-6);
+            lay.yaxis.range = [lo_I - pad, hi_I + pad];
+            lay.shapes = [{
+                type: 'line', x0: 0, x1: 0, y0: lo_I - pad, y1: hi_I + pad,
+                line: { color: 'rgba(255,255,255,0.25)', width: 1, dash: 'dot' }
+            }];
+
+            Plotly.react('energy-plot', [
+                { x: tx, y: ty, mode: 'lines', name: 'tangent at ε = 0',
+                  line: { color: '#ff5555', width: 2, dash: 'dot' }, hoverinfo: 'skip' },
+                { x: es, y: Is, mode: 'lines', name: 'I(ε)',
+                  line: { color: '#a855f7', width: 3 } },
+                { x: [0], y: [I0], mode: 'markers', name: 'ε = 0',
+                  marker: { color: '#4ade80', size: 11 } },
+                { x: [epsilon], y: [functional(epsilon)], mode: 'markers', name: 'current ε',
+                  marker: { color: '#eebb22', size: 13, symbol: 'diamond' } }
+            ], lay, CONFIG);
+        }
+
+        // ── Readouts ─────────────────────────────────────────────────────────
+        function fmt(v) {
+            if (Math.abs(v) < ZERO) return '0';
+            return (Math.abs(v) < 1e-3 || Math.abs(v) >= 1e5)
+                ? v.toExponential(3) : v.toFixed(5);
+        }
+
+        function updateReadouts() {
+            const I0 = functional(0), Ie = functional(epsilon);
+            const slope = firstVariation(candidate, eta);
+            $('out-i0').textContent = fmt(I0);
+            $('out-ieps').textContent = fmt(Ie);
+            $('out-slope').textContent = fmt(slope);
+
+            const v = $('verdict');
+            if (Math.abs(slope) < ZERO) {
+                // Distinguish a genuine minimum from the cubic's inflection.
+                const h = 0.02;
+                const curv = (functional(h) - 2 * I0 + functional(-h)) / (h * h);
+                if (Math.abs(curv) < 1e-6) {
+                    // Two very different flat cases: I genuinely constant along
+                    // this direction, or an inflection that changes sign.
+                    const swing = Math.max(Math.abs(functional(1) - I0),
+                                           Math.abs(functional(-1) - I0));
+                    v.className = 'verdict warn';
+                    v.innerHTML = swing < 1e-8
+                        ? '<strong>I does not change at all in this direction.</strong> ' +
+                          'This η happens to leave the functional untouched, so it tells us nothing. ' +
+                          'Try the lopsided variation.'
+                        : '<strong>Stationary, but flat to second order too.</strong> ' +
+                          'I(ε) changes sign through ε = 0, so f is neither a maximum nor a minimum — ' +
+                          'the Euler–Lagrange equation is necessary, not sufficient.';
+                } else {
+                    v.className = 'verdict good';
+                    v.innerHTML = '<strong>Stationary in this direction.</strong> The tangent is ' +
+                        'horizontal, and I(ε) curves ' + (curv > 0 ? 'upwards' : 'downwards') +
+                        ', so moving either way ' + (curv > 0 ? 'increases' : 'decreases') + ' I.';
+                }
+            } else {
+                v.className = 'verdict bad';
+                v.innerHTML = '<strong>Not stationary.</strong> δI = ' + fmt(slope) +
+                    ' ≠ 0, so pushing ε ' + (slope > 0 ? 'negative' : 'positive') +
+                    ' makes I smaller — f cannot be an extremal.';
+            }
+
+            // Tally across every variation in the menu.
+            const zeros = ETAS.filter(e => Math.abs(firstVariation(candidate, e)) < ZERO);
+            const box = $('all-eta');
+            if (zeros.length === ETAS.length) {
+                box.className = 'verdict good';
+                box.innerHTML = '<strong>δI = 0 for all ' + ETAS.length + ' variations.</strong> ' +
+                    'Consistent with f solving the Euler–Lagrange equation.';
+            } else if (zeros.length === 0) {
+                box.className = 'verdict bad';
+                box.innerHTML = '<strong>δI ≠ 0 for every variation.</strong> f is not an extremal.';
+            } else {
+                box.className = 'verdict warn';
+                box.innerHTML = '<strong>δI = 0 for only ' + zeros.length + ' of ' + ETAS.length +
+                    ' variations</strong> (' + zeros.map(e => e.id).join(', ') + '). One lucky ' +
+                    'direction proves nothing: the Euler–Lagrange equation needs every admissible η.';
+            }
+        }
+
+        function typeset() {
+            if (window.MathJax && MathJax.typesetPromise) {
+                MathJax.typesetPromise([$('sidebar')]).catch(() => {});
+            }
+        }
+
+        function refresh() {
+            drawCurves();
+            drawEnergy();
+            updateReadouts();
+        }
+
+        // ── Wiring ───────────────────────────────────────────────────────────
+        // The eta labels depend on the interval, so the menu is rebuilt whenever
+        // the problem changes. Indices are stable, so the selection survives.
+        function fillEtas() {
+            const sel = $('eta-select');
+            const keep = sel.value;
+            const c = coords(problem.a, problem.b);
+            sel.innerHTML = '';
+            ETAS.forEach((e, i) => {
+                const o = document.createElement('option');
+                o.value = String(i);
+                o.textContent = 'η = ' + e.tex(c) + '   — ' + e.tag;
+                sel.appendChild(o);
+            });
+            sel.value = keep === '' ? '0' : keep;
+            eta = ETAS[+sel.value];
+        }
+
+        function fillCandidates() {
+            const sel = $('candidate-select');
+            sel.innerHTML = '';
+            problem.cands.forEach((c, i) => {
+                const o = document.createElement('option');
+                o.value = String(i);
+                o.textContent = c.label;
+                sel.appendChild(o);
+            });
+            sel.value = '0';
+            candidate = problem.cands[0];
+        }
+
+        function init() {
+            const ps = $('problem-select');
+            PROBLEMS.forEach((p, i) => {
+                const o = document.createElement('option');
+                o.value = String(i);
+                o.textContent = p.label;
+                ps.appendChild(o);
+            });
+            const es = $('eta-select');
+
+            ps.addEventListener('change', () => {
+                problem = PROBLEMS[+ps.value];
+                fillCandidates();
+                fillEtas();
+                // Some problems only say what they mean in a particular direction.
+                if (problem.defaultEta) {
+                    const k = ETAS.findIndex(e => e.id === problem.defaultEta);
+                    if (k >= 0) { es.value = String(k); eta = ETAS[k]; }
+                }
+                $('problem-note').innerHTML = problem.note;
+                refresh();
+                typeset();
+            });
+
+            $('candidate-select').addEventListener('change', e => {
+                candidate = problem.cands[+e.target.value];
+                refresh();
+            });
+
+            es.addEventListener('change', e => {
+                eta = ETAS[+e.target.value];
+                refresh();
+            });
+
+            const slider = $('eps-slider');
+            slider.addEventListener('input', () => {
+                epsilon = parseFloat(slider.value);
+                $('eps-display').textContent = epsilon.toFixed(2);
+                refresh();
+            });
+
+            fillCandidates();
+            fillEtas();
+            $('problem-note').innerHTML = problem.note;
+            refresh();
+            typeset();
+        }
+
+        window.addEventListener('load', init);
+    </script>
+</body>
+
+</html>
