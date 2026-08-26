@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Calculus of Variations - Interactive Exploration</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js" async></script>
+    <style>
+        :root {
+            --primary: #eebb22;
+            --primary-hover: #ffcc33;
+            --bg-dark: #0f1115;
+            --card-bg: rgba(30, 41, 59, 0.5);
+            --text-main: #e2e8f0;
+            --text-muted: #94a3b8;
+            --accent-red: #ff5555;
+            --accent-green: #4ade80;
+            --accent-blue: #60a5fa;
+            --border: rgba(255, 255, 255, 0.1);
+        }
+
+        body {
+            margin: 0;
+            background: radial-gradient(circle at top right, #1e293b, var(--bg-dark));
+            color: var(--text-main);
+            font-family: 'Inter', sans-serif;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 40px 20px;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 60px;
+            max-width: 800px;
+        }
+
+        h1 {
+            font-size: 3.5rem;
+            font-weight: 800;
+            margin: 0;
+            background: linear-gradient(to right, var(--primary), #ffffff);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+            letter-spacing: -2px;
+        }
+
+        p.subtitle {
+            font-size: 1.25rem;
+            color: var(--text-muted);
+            margin-top: 15px;
+            line-height: 1.6;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 25px;
+            width: 100%;
+            max-width: 1000px;
+        }
+
+        .card {
+            background: var(--card-bg);
+            backdrop-filter: blur(12px);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            padding: 30px;
+            text-decoration: none;
+            color: inherit;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .card:hover {
+            transform: translateY(-8px);
+            border-color: var(--primary);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+            background: rgba(30, 41, 59, 0.8);
+        }
+
+        .card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 4px;
+            background: linear-gradient(to right, transparent, var(--primary), transparent);
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        .card:hover::before {
+            opacity: 1;
+        }
+
+        .card h2 {
+            font-size: 1.5rem;
+            margin: 0 0 10px 0;
+            color: var(--primary);
+        }
+
+        .card p {
+            font-size: 0.95rem;
+            color: var(--text-muted);
+            line-height: 1.5;
+            margin: 0;
+            flex-grow: 1;
+        }
+
+        .card .icon {
+            font-size: 2.5rem;
+            margin-bottom: 20px;
+        }
+
+        footer {
+            margin-top: 80px;
+            font-size: 0.85rem;
+            color: rgba(255, 255, 255, 0.3);
+        }
+
+        @media (max-width: 640px) {
+            h1 {
+                font-size: 2.5rem;
+            }
+
+            .grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <header>
+        <h1>Calculus of Variations</h1>
+        <p class="subtitle">An interactive guide to the extrema of functionals, from the Brachistochrone
+            and soap bubbles to Dido's problem.</p>
+    </header>
+
+    <div class="grid">
+        <a href="slides.html" class="card">
+            <div class="icon">📽️</div>
+            <h2>Lecture Slides</h2>
+            <p>Overview of the theory, history, and applications of the Calculus of Variations.</p>
+        </a>
+
+        <a href="lagrange.html" class="card">
+                <div class="icon" style="
+                    font-family: 'Times New Roman', serif;
+                    font-size: 2.2em;
+                    background: linear-gradient(135deg, #6a5acd 0%, #00bfff 100%);
+                    -webkit-background-clip: text;
+                    -webkit-text-fill-color: transparent;
+                    text-shadow: 0 2px 6px rgba(106,90,205,0.15);
+                    display: inline-block;
+                ">&#x03BB;</div>
+            <h2>Lagrange Multipliers</h2>
+            <p>3D visualisation of constrained optimization and the geometric intuition behind the condition \[\nabla
+                f = \lambda \nabla g.\]</p>
+        </a>
+        <a href="brachistochrone.html" class="card">
+            <div class="icon">🎢</div>
+            <h2>Brachistochrone</h2>
+            <p>Find the path of quickest descent between two points under gravity. Visualisation of the
+                cycloid solution.</p>
+        </a>
+        <a href="soap_bubbles.html" class="card">
+            <div class="icon">🫧</div>
+            <h2>Soap Bubbles</h2>
+            <p>Explore catenoids and the minimal surface problem between two rings. Visualise stable, unstable, and
+                Goldschmidt solutions.</p>
+        </a>
+
+        <a href="dido.html" class="card">
+            <div class="icon">🏹</div>
+            <h2>Dido's Problem</h2>
+            <p>Find the curve that bounds the maximum area for a given perimeter.</p>
+        </a>
+    </div>
+
+    <footer>
+        MATH0043 &bull; Calculus of Variations
+    </footer>
+</body>
+
+</html>

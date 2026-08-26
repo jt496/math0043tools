@@ -1,0 +1,983 @@
+        :root {
+            --primary: #00d9ff;
+            --primary-dark: #00a8cc;
+            --secondary: #ff6b6b;
+            --background: #1a1a2e;
+            --background-light: #16213e;
+            --card-bg: #1f2940;
+            --text: #eee;
+            --text-muted: #aaa;
+            --success: #4ade80;
+            --warning: #fbbf24;
+            --border: #2a3a5a;
+        }
+
+        /* Link styles: high-contrast and visible in dark theme */
+        a {
+            color: var(--primary);
+            text-decoration: underline;
+            text-underline-offset: 3px;
+            transition: color 0.12s ease;
+        }
+
+        a:visited {
+            color: var(--primary-dark);
+        }
+
+        a:hover,
+        a:focus {
+            color: #ffd07a;
+            /* warm highlight on hover */
+            outline: none;
+        }
+
+        /* Soap bubble demo JS moved to the page script section (setupSoapBubblePlot is defined there) */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html,
+        body {
+            height: 100%;
+            overflow: hidden;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            /* Increase base font size for generally larger text */
+            font-size: 26px;
+            line-height: 1.55;
+            background: var(--background);
+            color: var(--text);
+        }
+
+        /* Slide Container */
+        .presentation {
+            height: 100vh;
+            width: 100vw;
+            position: relative;
+        }
+
+        .slide {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: none;
+            flex-direction: column;
+            padding: 30px 50px;
+            overflow: hidden;
+        }
+
+        .slide.active {
+            display: flex;
+        }
+
+        /* Slide Header */
+        .slide-header {
+            flex-shrink: 0;
+            margin-bottom: 20px;
+        }
+
+        .slide-number {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            margin-bottom: 0;
+            display: inline-block;
+            vertical-align: middle;
+            line-height: 1;
+            margin-right: 8px;
+        }
+
+        .current-slide-badge {
+            display: inline-block;
+            min-width: 28px;
+            padding: 2px 6px;
+            background: rgba(255, 255, 255, 0.04);
+            color: var(--text-muted);
+            border-radius: 4px;
+            font-weight: 400;
+            margin-right: 8px;
+            text-align: center;
+            vertical-align: middle;
+            font-size: 0.78rem;
+            box-shadow: none;
+            border: 1px solid rgba(255, 255, 255, 0.02);
+            opacity: 0.95;
+        }
+
+        .header-step-progress {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            margin-left: 0;
+            display: inline-block;
+            vertical-align: middle;
+            line-height: 1;
+        }
+
+
+
+        .slide-title {
+            font-size: 1.3rem;
+            color: var(--primary);
+            margin-top: 6px;
+            margin-bottom: 10px;
+        }
+
+        .slide-subtitle {
+            font-size: 1.1rem;
+            color: var(--text-muted);
+        }
+
+        /* Slide Content */
+        .slide-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-start;
+            overflow-y: auto;
+            overflow-x: hidden;
+            scrollbar-width: thin;
+            scrollbar-color: var(--border) transparent;
+        }
+
+        .slide-content::before,
+        .slide-content::after {
+            content: '';
+            margin: auto;
+        }
+
+        /* Allow vertical scrolling on slides that opt-in via the .scrolltop class */
+        .slide.scrolltop .slide-content {
+            -webkit-overflow-scrolling: touch;
+            padding-right: 12px;
+            /* give some room for scrollbar */
+        }
+        
+        .slide.scrolltop .slide-content::before {
+            display: none;
+        }
+
+
+        /* Navigation */
+        .nav-bar {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 50px;
+            background: var(--background-light);
+            display: flex;
+            align-items: center;
+            justify-content: flex-start;
+            gap: 12px;
+            padding: 0 16px;
+            border-top: 1px solid var(--border);
+            z-index: 1000;
+        }
+
+        /* Hidden state for the bottom nav: slide down out of view */
+        .nav-bar.hidden {
+            transform: translateY(110%);
+            transition: transform 0.25s ease-in-out;
+            pointer-events: none;
+        }
+
+        /* Floating handle to toggle the nav when it's hidden (or visible) */
+        #navToggleHandle {
+            position: fixed;
+            right: 16px;
+            bottom: 16px;
+            width: 44px;
+            height: 44px;
+            border-radius: 22px;
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            color: var(--text);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            z-index: 1101;
+            box-shadow: 0 6px 18px rgba(0, 0, 0, 0.45);
+            transition: transform 0.12s ease, background 0.12s ease;
+            font-size: 1.05rem;
+        }
+
+        #navToggleHandle:hover {
+            transform: translateY(-2px);
+            border-color: var(--primary);
+        }
+
+        .nav-btn {
+            padding: 8px 20px;
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            color: var(--text);
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: all 0.2s;
+        }
+
+        .nav-btn:hover:not(:disabled) {
+            background: var(--primary);
+            color: var(--background);
+            border-color: var(--primary);
+        }
+
+        .nav-btn:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
+
+        /* Icon-only variant for small nav icons */
+        .nav-btn.icon-btn {
+            padding: 6px 10px;
+            width: 40px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.05rem;
+        }
+
+        .progress-info {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .progress-bar-container {
+            width: 200px;
+            height: 6px;
+            background: var(--card-bg);
+            border-radius: 3px;
+            overflow: hidden;
+        }
+
+        .progress-bar {
+            height: 100%;
+            background: linear-gradient(90deg, var(--primary), var(--secondary));
+            transition: width 0.3s;
+        }
+
+        .progress-text {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+        }
+
+        .solver-link {
+            padding: 8px 15px;
+            background: var(--secondary);
+            border: none;
+            color: white;
+            border-radius: 5px;
+            text-decoration: none;
+            font-size: 0.9rem;
+        }
+
+        .solver-link:hover {
+            background: #ff5252;
+        }
+
+        /* Fragment toggle button */
+        .toggle-btn {
+            padding: 6px 12px;
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            color: var(--text);
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 0.8rem;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .toggle-btn:hover {
+            border-color: var(--primary);
+        }
+
+        .toggle-btn .toggle-indicator {
+            width: 32px;
+            height: 18px;
+            background: var(--border);
+            border-radius: 9px;
+            position: relative;
+            transition: background 0.2s;
+        }
+
+        .toggle-btn .toggle-indicator::after {
+            content: '';
+            position: absolute;
+            width: 14px;
+            height: 14px;
+            background: var(--text);
+            border-radius: 50%;
+            top: 2px;
+            left: 2px;
+            transition: transform 0.2s;
+        }
+
+        .toggle-btn.active .toggle-indicator {
+            background: var(--primary);
+        }
+
+        .toggle-btn.active .toggle-indicator::after {
+            transform: translateX(14px);
+        }
+
+        /* Content Styles */
+        .two-column {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 40px;
+            width: 100%;
+            align-items: center;
+        }
+
+        .three-column {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 30px;
+            width: 100%;
+            align-items: center;
+        }
+
+        .center-content {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            width: 100%;
+        }
+
+        .plot-stack-controls {
+            position: absolute;
+            bottom: 15px;
+            right: 15px;
+            z-index: 100;
+            display: flex;
+            gap: 8px;
+        }
+
+        .mini-toggle-btn {
+            padding: 4px 10px;
+            background: rgba(31, 41, 64, 0.8);
+            border: 1px solid var(--border);
+            color: var(--text);
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.7rem;
+            transition: all 0.2s;
+        }
+
+        .mini-toggle-btn:hover {
+            border-color: var(--primary);
+            background: var(--card-bg);
+        }
+
+        .mini-toggle-btn.active {
+            background: var(--primary);
+            color: var(--background);
+            border-color: var(--primary);
+        }
+
+        .plot-stack {
+            position: relative;
+            width: 100%;
+            min-height: 60vh;
+        }
+
+        .plot-stack-item {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            opacity: 0;
+            transition: opacity 0.5s ease;
+            pointer-events: none;
+        }
+
+        .plot-stack-item.visible {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .card {
+            background: var(--card-bg);
+            padding: 25px;
+            border-radius: 12px;
+            border-left: 4px solid var(--primary);
+        }
+
+        .card.secondary {
+            border-left-color: var(--secondary);
+        }
+
+        .card.success {
+            border-left-color: var(--success);
+        }
+
+        .card.warning {
+            border-left-color: var(--warning);
+        }
+
+        .card h3 {
+            color: var(--primary);
+            margin-bottom: 15px;
+            font-size: 1.3rem;
+        }
+
+        .card.secondary h3 {
+            color: var(--secondary);
+        }
+
+        .card p {
+            line-height: 1.6;
+            margin-bottom: 10px;
+        }
+
+        .definition-box {
+            background: linear-gradient(135deg, var(--card-bg), #1a2a3a);
+            padding: 30px;
+            border-radius: 12px;
+            border: 2px solid var(--primary);
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .theorem-box {
+            background: linear-gradient(135deg, #1a2a3a, #1a3a2a);
+            padding: 30px;
+            border-radius: 12px;
+            border: 2px solid var(--success);
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        .equation-highlight {
+            background: var(--background);
+            padding: 20px 40px;
+            border-radius: 10px;
+            border: 2px solid var(--primary);
+            display: inline-block;
+            margin: 15px 0;
+        }
+
+        .big-equation {
+            font-size: 1.1rem;
+        }
+
+        .example-box {
+            background: var(--background-light);
+            padding: 15px 20px;
+            border-radius: 8px;
+            margin-top: 15px;
+        }
+
+        .example-box .label {
+            color: var(--warning);
+            font-weight: 600;
+            margin-bottom: 5px;
+        }
+
+        .solution {
+            color: var(--success);
+            margin-top: 8px;
+        }
+
+        /* Interactive Elements */
+        .plot-container {
+            width: 100%;
+            height: 300px;
+            background: var(--background);
+            border-radius: 8px;
+        }
+
+        .plot-container.large {
+            height: 60vh;
+        }
+
+        .controls {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+            flex-wrap: wrap;
+        }
+
+        .control-btn {
+            padding: 10px 20px;
+            font-size: 1.0rem;
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            color: var(--text);
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-weight: 500;
+        }
+
+        .control-btn:hover {
+            border-color: var(--primary);
+        }
+
+        .control-btn.active {
+            background: var(--primary);
+            color: var(--background);
+            border-color: var(--primary);
+        }
+
+        .slider-row {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin: 15px 0;
+        }
+
+        .slider-row input[type="range"] {
+            flex: 1;
+            max-width: 300px;
+            accent-color: var(--primary);
+        }
+
+        .result-display {
+            background: var(--background-light);
+            padding: 15px 25px;
+            border-radius: 8px;
+            text-align: center;
+            margin-top: 15px;
+        }
+
+        .result-value {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: var(--primary);
+        }
+
+        /* Quiz Elements */
+        .quiz-box {
+            background: var(--card-bg);
+            padding: 25px;
+            border-radius: 10px;
+            border: 1px dashed var(--border);
+            max-width: 700px;
+            margin: 0 auto;
+        }
+
+        .quiz-question {
+            font-size: 1.1rem;
+            margin-bottom: 15px;
+        }
+
+        .reveal-btn {
+            padding: 12px 28px;
+            font-size: 1.1rem;
+            background: var(--primary);
+            border: none;
+            color: var(--background);
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+
+        .reveal-btn:hover {
+            background: var(--primary-dark);
+        }
+
+        .answer {
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid var(--border);
+            display: none;
+        }
+
+        .answer.visible {
+            display: block;
+        }
+
+        /* Lists */
+        ul,
+        ol {
+            margin: 15px 0 15px 25px;
+        }
+
+        li {
+            margin-bottom: 8px;
+            line-height: 1.5;
+        }
+
+        /* Key Insight */
+        .insight {
+            display: flex;
+            align-items: flex-start;
+            gap: 15px;
+            background: linear-gradient(135deg, #1a2a4a, var(--card-bg));
+            padding: 20px;
+            border-radius: 10px;
+            border: 1px solid var(--primary);
+            margin: 20px auto;
+        }
+
+        .insight-icon {
+            font-size: 2rem;
+            flex-shrink: 0;
+        }
+
+        /* Steps */
+        .steps {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .step {
+            display: flex;
+            gap: 15px;
+            align-items: flex-start;
+            background: var(--background-light);
+            padding: 15px;
+            border-radius: 8px;
+        }
+
+        .step-num {
+            width: 30px;
+            height: 30px;
+            background: var(--primary);
+            color: var(--background);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            flex-shrink: 0;
+        }
+
+        /* Title Slide */
+        .title-slide {
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+        }
+
+        .title-slide h1 {
+            font-size: 3.5rem;
+            color: var(--primary);
+            margin-bottom: 20px;
+        }
+
+        .title-slide .subtitle {
+            font-size: 1.5rem;
+            color: var(--text-muted);
+            margin-bottom: 40px;
+        }
+
+        .title-slide .author {
+            color: var(--text-muted);
+            font-size: 1.1rem;
+        }
+
+        /* Animation container */
+        .animation-container {
+            width: 100%;
+            height: 250px;
+            background: var(--background);
+            border-radius: 8px;
+            position: relative;
+        }
+
+        /* Application cards */
+        .app-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 20px;
+        }
+
+        .app-card {
+            background: var(--card-bg);
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            border: 1px solid var(--border);
+            transition: all 0.2s;
+        }
+
+        .app-card:hover {
+            border-color: var(--primary);
+            transform: translateY(-3px);
+        }
+
+        .app-icon {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+        }
+
+        .app-card h4 {
+            color: var(--primary);
+            margin-bottom: 8px;
+        }
+
+        .slide img {
+            max-height: 60vh;
+            width: auto;
+            max-width: 100%;
+            object-fit: contain;
+        }
+
+        /* Keyboard hint (moved to top-right) */
+        .keyboard-hint {
+            position: fixed;
+            top: 14px;
+            right: 20px;
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            background: rgba(0, 0, 0, 0.06);
+            padding: 6px 10px;
+            border-radius: 6px;
+            border: 1px solid var(--border);
+            z-index: 1100;
+        }
+
+        kbd {
+            background: var(--card-bg);
+            padding: 3px 8px;
+            border-radius: 4px;
+            border: 1px solid var(--border);
+            font-family: monospace;
+        }
+
+        /* Comparison table */
+        .comparison-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .comparison-table th,
+        .comparison-table td {
+            padding: 15px;
+            text-align: left;
+            border: 1px solid var(--border);
+        }
+
+        .comparison-table th {
+            background: var(--primary);
+            color: var(--background);
+        }
+
+        .comparison-table td {
+            background: var(--background-light);
+        }
+
+        /* Math display */
+        .math-center {
+            text-align: center;
+            margin: 15px 0;
+        }
+
+        /* Fragment reveal animations */
+        .fragment {
+            opacity: 0;
+            transform: translateY(20px);
+            transition: opacity 0.4s ease, transform 0.4s ease;
+            pointer-events: none;
+        }
+
+        .fragment.visible {
+            opacity: 1;
+            transform: translateY(0);
+            pointer-events: auto;
+        }
+
+        .fragment.fade-in {
+            transform: none;
+        }
+
+        .fragment.slide-up {
+            transform: translateY(30px);
+        }
+
+        .fragment.slide-right {
+            transform: translateX(-30px);
+        }
+
+        .fragment.slide-right.visible {
+            transform: translateX(0);
+        }
+
+        .fragment.scale-in {
+            transform: scale(0.8);
+        }
+
+        .fragment.scale-in.visible {
+            transform: scale(1);
+        }
+
+        /* Print Styles */
+        @media print {
+            @page {
+                size: portrait;
+                margin: 1cm;
+            }
+
+            :root {
+                --primary: #005a6b !important;
+                --secondary: #b33030 !important;
+                --success: #1e5c37 !important;
+                --warning: #856404 !important;
+                --background: #ffffff !important;
+                --text: #000000 !important;
+            }
+
+            html, body {
+                width: 100%;
+                height: auto !important;
+                margin: 0 !important;
+                padding: 0 !important;
+                overflow: visible !important;
+                background: white !important;
+                color: black !important;
+                /* Compact text for portrait handout */
+                font-size: 14px !important;
+            }
+
+            .presentation {
+                height: auto !important;
+                width: auto !important;
+                position: static !important;
+                display: block !important;
+            }
+
+            .slide {
+                position: relative !important;
+                display: flex !important;
+                flex-direction: column !important;
+                justify-content: flex-start !important;
+                page-break-after: always !important;
+                break-after: page !important;
+                
+                width: 100% !important;
+                height: auto !important;
+                min-height: 30vh !important; /* Allow slides to be shorter in portrait */
+                
+                margin: 0 0 20px 0 !important;
+                padding: 20px 0 !important;
+                border: none !important;
+                border-bottom: 1px dashed #eee !important;
+                background: white !important;
+                color: black !important;
+                opacity: 1 !important;
+                visibility: visible !important;
+                box-sizing: border-box !important;
+                overflow: visible !important;
+            }
+
+            .slide-title {
+                color: var(--primary) !important;
+                font-size: 1.4rem !important;
+                margin-top: 0 !important;
+                border-bottom: 1px solid #ddd !important;
+                padding-bottom: 5px !important;
+                margin-bottom: 15px !important;
+            }
+
+            .slide-content {
+                flex: none !important;
+                overflow: visible !important;
+                display: block !important;
+                height: auto !important;
+            }
+
+            /* Hide ALL plots, animations, and interactive containers */
+            .plot-container, 
+            .animation-container, 
+            .plot-stack, 
+            #soapPlotContainer, 
+            .plot-stack-item,
+            .controls, 
+            .mini-toggle-btn, 
+            .plot-stack-controls, 
+            #stepHint,
+            .nav-bar, 
+            #navToggleHandle, 
+            .keyboard-hint,
+            .progress-info, 
+            .solver-link,
+            #raceResults,
+            #tautResults,
+            .slider-row {
+                display: none !important;
+            }
+
+            /* Show all fragments */
+            .fragment {
+                opacity: 1 !important;
+                transform: none !important;
+                visibility: visible !important;
+                display: block !important;
+            }
+
+            /* Simplify layouts for text flow */
+            .two-column, .three-column {
+                display: block !important;
+                width: 100% !important;
+            }
+
+            .two-column > div, .three-column > div {
+                width: 100% !important;
+                margin-bottom: 15px !important;
+            }
+
+            /* Cards and boxes */
+            .card, .definition-box, .theorem-box, .equation-highlight, 
+            .example-box, .app-card, .insight, .step, .result-display {
+                background: white !important;
+                color: black !important;
+                border: 1px solid #ddd !important;
+                box-shadow: none !important;
+                margin: 12px 0 !important;
+                padding: 15px !important;
+                page-break-inside: avoid !important;
+            }
+            
+            h1, h2, h3, h4, p, li, span, div, mjx-container {
+                color: black !important;
+                background: transparent !important;
+            }
+
+            .slide img {
+                display: block !important;
+                max-height: 30vh !important;
+                max-width: 80% !important;
+                margin: 10px auto !important;
+            }
+            
+            /* MathJax scaling for portrait print */
+            mjx-container {
+                font-size: 100% !important;
+                margin: 10px 0 !important;
+            }
+        }
+
+        /* Step hint */
+        .step-hint {
+            position: fixed;
+            bottom: 60px;
+            left: 20px;
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        .step-hint.show {
+            opacity: 1;
+        }
+
+        /* Hide the bottom step hint — use header progress instead */
+        #stepHint {
+            display: none !important;
+        }

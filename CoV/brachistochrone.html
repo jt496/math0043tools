@@ -1,0 +1,651 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>The Brachistochrone Problem</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js" async></script>
+    <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+    <style>
+        :root {
+            --primary: #eebb22;
+            --primary-hover: #ffcc33;
+            --bg-dark: #0f1115;
+            --panel-bg: rgba(20, 24, 30, 0.95);
+            --text-main: #e2e8f0;
+            --text-muted: #94a3b8;
+            --accent-red: #ff5555;
+            --accent-green: #4ade80;
+            --accent-blue: #60a5fa;
+            --accent-purple: #a855f7;
+        }
+
+        body {
+            margin: 0;
+            background-color: var(--bg-dark);
+            color: var(--text-main);
+            font-family: 'Inter', sans-serif;
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        #sidebar {
+            width: 450px;
+            padding: 30px;
+            background: var(--panel-bg);
+            z-index: 10;
+            box-shadow: 4px 0 20px rgba(0, 0, 0, 0.6);
+            overflow-y: auto;
+            border-right: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        #sidebar::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        #sidebar::-webkit-scrollbar-thumb {
+            background-color: rgba(255, 255, 255, 0.2);
+            border-radius: 4px;
+        }
+
+        #plot-container {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            background-color: var(--bg-dark);
+            height: 100vh;
+        }
+
+        #plotly-div,
+        #curve-plot-div {
+            flex: 1;
+            width: 100%;
+        }
+
+        #plotly-div {
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        h1 {
+            font-size: 2.2rem;
+            font-weight: 800;
+            color: var(--primary);
+            margin-top: 0;
+            margin-bottom: 20px;
+            letter-spacing: -0.5px;
+        }
+
+        h2 {
+            font-size: 1.5rem;
+            color: var(--text-main);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            padding-bottom: 10px;
+            margin-top: 30px;
+        }
+
+        p,
+        li {
+            font-size: 1.1rem;
+            line-height: 1.6;
+            color: var(--text-main);
+            margin-bottom: 15px;
+        }
+
+        .control-group {
+            margin-top: 25px;
+            background: rgba(0, 0, 0, 0.3);
+            padding: 20px;
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        .control-group label {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 15px;
+            color: var(--text-muted);
+            font-weight: 600;
+            font-size: 1.1rem;
+            align-items: center;
+        }
+
+        input[type=range] {
+            width: 100%;
+            accent-color: var(--primary);
+            height: 8px;
+            border-radius: 4px;
+            outline: none;
+            margin-bottom: 10px;
+            cursor: pointer;
+        }
+
+        .stat-box {
+            background: rgba(0, 0, 0, 0.4);
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            font-family: 'Courier New', monospace;
+            font-size: 1.1rem;
+            color: var(--accent-green);
+            margin-top: 15px;
+            text-align: center;
+            font-weight: bold;
+        }
+
+        .solution-list {
+            list-style: none;
+            padding: 0;
+            margin-top: 10px;
+            max-height: 150px;
+            overflow-y: auto;
+        }
+
+        .solution-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .highlight {
+            color: var(--primary);
+            font-weight: bold;
+        }
+
+        #release-btn {
+            width: 100%;
+            padding: 15px;
+            background: var(--primary);
+            color: var(--bg-dark);
+            border: none;
+            border-radius: 8px;
+            font-size: 1.1rem;
+            font-weight: 800;
+            cursor: pointer;
+            margin-top: 20px;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        #release-btn:hover {
+            background: var(--primary-hover);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(238, 187, 34, 0.3);
+        }
+
+        #release-btn:active {
+            transform: translateY(0);
+        }
+
+        #release-btn:disabled {
+            background: var(--text-muted);
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .slider-markers {
+            position: relative;
+            width: 100%;
+            height: 25px;
+            margin-top: 5px;
+        }
+
+        .marker {
+            position: absolute;
+            top: 0;
+            transform: translateX(-50%);
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            white-space: nowrap;
+            font-weight: 600;
+        }
+
+        .marker::before {
+            content: '';
+            position: absolute;
+            top: -8px;
+            left: 50%;
+            width: 1px;
+            height: 6px;
+            background: rgba(255, 255, 255, 0.2);
+        }
+    </style>
+</head>
+
+<body>
+    <div id="sidebar">
+        <a href="index.html"
+            style="display: inline-block; margin-bottom: 20px; color: var(--accent-blue); text-decoration: none; font-weight: 600;">&larr;
+            Back to CoV Home</a>
+        <h1>Brachistochrone: \[\frac{\theta_f - \sin\theta_f}{1 - \cos\theta_f} = c\]</h1>
+
+        <p>The <strong>Brachistochrone problem</strong> asks for the shape of the curve between two points \( (0,0) \)
+            and \( (a,h) \) that a mass will slide down under gravity in the shortest possible time. (Note: here \(y\)
+            is measured downwards).</p>
+
+        <p>The solution is a <strong>cycloid</strong>, parameterized as:
+            \[ x(\theta) = r(\theta - \sin\theta) \]
+            \[ y(\theta) = r(1 - \cos\theta) \]
+            where \(\theta\) is the parameter. At the endpoint \( (a,h) \), the parameter reaches a final value
+            \(\theta_f\), satisfying:
+            \[ \frac{x}{y} = \frac{\theta_f - \sin\theta_f}{1 - \cos\theta_f} = \frac{a}{h} = c \]</p>
+
+
+
+        <div class="control-group">
+            <label>
+                <span>Ratio \(c = a / h\)</span>
+                <span id="c-value-display" style="color: var(--primary); font-size: 1.2rem;">1.00</span>
+            </label>
+            <input type="range" id="c-slider" min="0" max="100" step="0.1" value="25" list="slider-ticks">
+            <datalist id="slider-ticks">
+                <option value="29.5"></option> <!-- Snap point for theta_f = pi -->
+            </datalist>
+            <div class="slider-markers">
+                <span class="marker" style="left: 0%;">0</span>
+                <span class="marker"
+                    style="left: 29.5%; color: var(--primary); font-family: serif; font-style: italic;">π/2</span>
+                <span class="marker" style="left: 100%;">∞</span>
+            </div>
+
+            <div style="margin-top: 15px;">
+                <label style="margin-bottom: 5px;">Calculated \(\theta_f\) (radians):</label>
+                <div class="stat-box" id="theta-display">0</div>
+            </div>
+
+            <ul class="solution-list" id="solution-list">
+                <!-- Data injected via JS -->
+            </ul>
+
+            <button id="release-btn">
+                <span>Release Particle</span>
+                <span style="font-size: 1.2rem;">🎢</span>
+            </button>
+        </div>
+
+        <h3>Mathematical Properties</h3>
+        <ul style="padding-left: 20px;">
+            <li>The function \(f(\theta_f) = \frac{\theta_f - \sin\theta_f}{1 - \cos\theta_f}\) is strictly increasing
+                for
+                \(\theta_f \in (0, 2\pi)\).</li>
+            <li>We have \(\lim_{\theta_f \to 0} f(\theta_f) = 0\).</li>
+            <li>Also \(\lim_{\theta_f \to 2\pi} f(\theta_f) = \infty\).</li>
+            <li>For any \(c > 0\), there is exactly one solution \(\theta_f \in (0, 2\pi)\).</li>
+        </ul>
+
+        <h3>Physical Interpretation</h3>
+        <div style="font-size: 0.95rem; color: var(--text-muted); margin-bottom: 20px;">
+            <p>The value \(\theta_f\) represents the total "swing" angle of the rolling circle to reach the endpoint.
+                If \(\theta_f < \pi\), the particle is still descending on the first half of the cycloid arc. If
+                    \(\theta_f=\pi\), the particle is at the very bottom of the cycloid arc. If \(\theta_f> \pi\), the
+                    particle has passed the minimum and is ascending to its final position.</p>
+        </div>
+    </div>
+
+    <div id="plot-container">
+        <div id="plotly-div"></div>
+        <div id="curve-plot-div"></div>
+    </div>
+
+    <script>
+        function f(x) {
+            if (Math.abs(x) < 1e-8) return 0;
+            return (x - Math.sin(x)) / (1 - Math.cos(x));
+        }
+
+        // Bisection method for finding root of f(x) = c
+        function findRoot(c, a, b, tol = 1e-7) {
+            let fa = f(a) - c;
+            let fb = f(b) - c;
+            if (fa * fb > 0) return (fa < fb) ? a : b;
+            for (let i = 0; i < 60; i++) {
+                let mid = (a + b) / 2;
+                let fmid = f(mid) - c;
+                if (Math.abs(fmid) < tol) return mid;
+                if (fa * fmid < 0) {
+                    b = mid; fb = fmid;
+                } else {
+                    a = mid; fa = fmid;
+                }
+            }
+            return (a + b) / 2;
+        }
+
+        const slider = document.getElementById('c-slider');
+        const cValDisplay = document.getElementById('c-value-display');
+        const thetaDisplay = document.getElementById('theta-display');
+        const solList = document.getElementById('solution-list');
+
+        // Function Plot Initialization
+        const xArr = [];
+        const yArr = [];
+        for (let x = 0.01; x < 2 * Math.PI - 0.005; x += 0.01) {
+            xArr.push(x);
+            yArr.push(f(x));
+        }
+        // Add a final point very close to the asymptote
+        const lastX = 2 * Math.PI - 0.0001;
+        xArr.push(lastX);
+        yArr.push(f(lastX));
+
+        const traceFunc = {
+            x: xArr, y: yArr,
+            mode: 'lines',
+            line: { color: '#60a5fa', width: 3 },
+            name: 'f(\u03B8)',
+            hovertemplate: '\u03B8: %{x:.3f}<br>f(\u03B8): %{y:.3f}<extra></extra>'
+        };
+
+        const traceLine = {
+            x: [0, 2 * Math.PI], y: [1, 1],
+            mode: 'lines',
+            line: { color: '#eebb22', width: 2, dash: 'dash' },
+            name: 'y = c',
+            hoverinfo: 'none'
+        };
+
+        const traceRoot = {
+            x: [], y: [],
+            mode: 'markers',
+            marker: { color: '#ffffff', size: 10, symbol: 'circle', line: { color: '#ff5555', width: 3 } },
+            name: 'Solution \u03B8_f',
+            hovertemplate: 'Root \u03B8_f: %{x:.4f}<extra></extra>'
+        };
+
+        const layout = {
+            paper_bgcolor: '#0f1115',
+            plot_bgcolor: '#0f1115',
+            margin: { t: 40, r: 40, l: 60, b: 40 },
+            xaxis: {
+                title: '\u03B8',
+                color: '#94a3b8',
+                gridcolor: '#1e222a',
+                zerolinecolor: '#444c56',
+                range: [0, 2 * Math.PI],
+                tickmode: 'array',
+                tickvals: [0, Math.PI / 2, Math.PI, 3 * Math.PI / 2, 2 * Math.PI],
+                ticktext: ['0', '\u03C0/2', '\u03C0', '3\u03C0/2', '2\u03C0']
+            },
+            yaxis: {
+                title: '(\u03B8 - sin \u03B8) / (1 - cos \u03B8)',
+                color: '#94a3b8',
+                gridcolor: '#1e222a',
+                zerolinecolor: '#444c56',
+                range: [0, 10]
+            },
+            showlegend: false,
+            font: { family: 'Inter, sans-serif' },
+            title: {
+                text: "Transcendental Equation for \u03B8",
+                font: { color: '#e2e8f0', size: 16 }
+            }
+        };
+
+        Plotly.newPlot('plotly-div', [traceFunc, traceLine, traceRoot], layout, { responsive: true });
+
+        // Curve Plot Initialization
+        const curveTrace = {
+            x: [], y: [],
+            mode: 'lines',
+            line: { color: '#eebb22', width: 5 },
+            name: 'Brachistochrone Path',
+            hoverinfo: 'none'
+        };
+
+        const targetMarker = {
+            x: [1], y: [1],
+            mode: 'markers',
+            marker: { color: '#ff5555', size: 12, symbol: 'x' },
+            name: 'Target (a, h)',
+            hoverinfo: 'none'
+        };
+
+        const curveLayout = {
+            paper_bgcolor: '#0f1115',
+            plot_bgcolor: '#0f1115',
+            margin: { t: 50, r: 40, l: 60, b: 60 },
+            xaxis: {
+                title: 'x (Horizontal distance)',
+                color: '#94a3b8',
+                gridcolor: '#1e222a',
+                zerolinecolor: '#444c56',
+                range: [-0.1, 5],
+                scaleanchor: 'y',
+                scaleratio: 1
+            },
+            yaxis: {
+                title: 'y (Vertical fall)',
+                color: '#94a3b8',
+                gridcolor: '#1e222a',
+                zerolinecolor: '#444c56',
+                range: [1.5, -0.5], // y increases downward
+                autorange: 'reversed'
+            },
+            showlegend: false,
+            font: { family: 'Inter, sans-serif' },
+            title: {
+                text: "Resulting Brachistochrone (Cycloid)",
+                font: { color: '#e2e8f0', size: 16 }
+            }
+        };
+
+        const particleTrace = {
+            x: [0], y: [0],
+            mode: 'markers',
+            marker: { color: '#4ade80', size: 14, symbol: 'circle', line: { color: '#ffffff', width: 2 } },
+            name: 'Particle',
+            hoverinfo: 'none',
+            visible: false
+        };
+
+        Plotly.newPlot('curve-plot-div', [curveTrace, targetMarker, particleTrace], curveLayout, { responsive: true });
+
+        function updatePlot() {
+            let v = parseFloat(slider.value);
+            let c;
+
+            const vSnap = 25 * Math.log10(4.5 * Math.PI + 1);
+            if (Math.abs(v - vSnap) < 1.5) { // Increased snap range for better 'feel'
+                v = vSnap;
+                slider.value = v;
+            }
+
+            if (v >= 100) {
+                c = Infinity;
+                cValDisplay.textContent = "\u221E";
+            } else {
+                // Shifted exponential mapping: v=0 -> c=0, v=25 -> c=1, v=50 -> c=11, v=75 -> c=111
+                c = (Math.pow(10, v / 25) - 1) / 9;
+
+                if (Math.abs(v - vSnap) < 0.001) {
+                    cValDisplay.innerHTML = '<span style="font-family: serif; font-style: italic;">\u03C0</span> / 2';
+                } else {
+                    cValDisplay.textContent = c < 100 ? c.toFixed(2) : Math.round(c);
+                }
+            }
+
+            let thetaStar;
+            if (c === Infinity) {
+                thetaStar = 2 * Math.PI;
+            } else if (c <= 0) {
+                thetaStar = 0;
+            } else {
+                thetaStar = findRoot(c, 0.0001, 2 * Math.PI - 0.0001);
+            }
+            thetaDisplay.textContent = thetaStar.toFixed(4);
+
+            // Update Function Plot
+            const y_val = (c === Infinity) ? 1000 : c;
+            const markerTheta = (c === Infinity) ? findRoot(y_val, 0.0001, 2 * Math.PI - 0.0001) : thetaStar;
+            const yLine = [y_val, y_val];
+            Plotly.restyle('plotly-div', {
+                'y': [yLine],
+                'visible': (c <= 0) ? false : true
+            }, [1]);
+
+            Plotly.restyle('plotly-div', {
+                'x': [[markerTheta]],
+                'y': [[y_val]],
+                'visible': (c <= 0) ? false : true
+            }, [2]);
+
+            // Update Curve Plot
+            const h = 1.0;
+            const a = (c === Infinity) ? 100 : c;
+
+            let cx = [], cy = [];
+            const steps = 200;
+
+            if (c === Infinity) {
+                const r_visual = 20;
+                for (let i = 0; i <= steps; i++) {
+                    const t = 2 * Math.PI * (i / steps);
+                    cx.push(r_visual * (t - Math.sin(t)));
+                    cy.push(r_visual * (1 - Math.cos(t)));
+                }
+                thetaDisplay.textContent = "2\u03C0 (\u221E)";
+            } else if (c <= 0) {
+                // Vertical descent case
+                cx = [0, 0];
+                cy = [0, h];
+                thetaDisplay.textContent = "0";
+            } else {
+                const r = h / (1 - Math.cos(thetaStar));
+                for (let i = 0; i <= steps; i++) {
+                    const t = thetaStar * (i / steps);
+                    cx.push(r * (t - Math.sin(t)));
+                    cy.push(r * (1 - Math.cos(t)));
+                }
+            }
+
+            Plotly.restyle('curve-plot-div', {
+                'x': [cx],
+                'y': [cy]
+            }, [0]);
+
+            if (c === Infinity) {
+                Plotly.restyle('curve-plot-div', { 'visible': false }, [1]);
+            } else {
+                Plotly.restyle('curve-plot-div', {
+                    'x': [[a]],
+                    'y': [[h]],
+                    'visible': true
+                }, [1]);
+            }
+
+            // Adjust axes for better view
+            if (c === Infinity) {
+                const r_max = 20;
+                Plotly.relayout('curve-plot-div', {
+                    'xaxis.range': [-1, r_max * 2 * Math.PI + 1],
+                    'yaxis.range': [-1, 2 * r_max + 1],
+                    'yaxis.autorange': 'reversed'
+                });
+            } else if (c <= 0) {
+                Plotly.relayout('curve-plot-div', {
+                    'xaxis.range': [-0.5, 0.5],
+                    'yaxis.range': [-0.1, 1.1],
+                    'yaxis.autorange': 'reversed'
+                });
+            } else {
+                const r = h / (1 - Math.cos(thetaStar));
+                const y_max = Math.max(h, 2 * r);
+                Plotly.relayout('curve-plot-div', {
+                    'xaxis.range': [-0.1 * a, 1.1 * a],
+                    'yaxis.range': [-0.1 * y_max, 1.1 * y_max],
+                    'yaxis.autorange': 'reversed'
+                });
+            }
+
+            // Adjust y-axis range in top plot to always show the dashed line
+            const y_axis_max = (c === Infinity) ? 1000 : Math.max(10, c * 1.2);
+            Plotly.relayout('plotly-div', {
+                'yaxis.range': [0, y_axis_max]
+            });
+
+            // Reset animation state
+            stopAnimation();
+        }
+
+        let animationId = null;
+        let isAnimating = false;
+        const releaseBtn = document.getElementById('release-btn');
+
+        function stopAnimation() {
+            if (animationId) {
+                cancelAnimationFrame(animationId);
+                animationId = null;
+            }
+            isAnimating = false;
+            releaseBtn.disabled = false;
+            releaseBtn.querySelector('span:first-child').textContent = "Release Particle";
+            Plotly.restyle('curve-plot-div', { visible: false }, [2]);
+        }
+
+        releaseBtn.addEventListener('click', () => {
+            if (isAnimating) return;
+
+            const c = (parseFloat(slider.value) >= 100) ? Infinity : (Math.pow(10, parseFloat(slider.value) / 25) - 1) / 9;
+            const thetaStar = (c === Infinity) ? 2 * Math.PI : ((c <= 0) ? 0 : findRoot(c, 0.0001, 2 * Math.PI - 0.0001));
+            const h = 1.0;
+            const r = (c === Infinity) ? 20 : (c <= 0 ? 0.5 : h / (1 - Math.cos(thetaStar)));
+            const g = 9.81;
+
+            if (thetaStar <= 0) return;
+
+            isAnimating = true;
+            releaseBtn.disabled = true;
+            releaseBtn.querySelector('span:first-child').textContent = "Falling...";
+            Plotly.restyle('curve-plot-div', { visible: true }, [2]);
+
+            let startTime = null;
+
+            // Physics: In a cycloid x = r(t-sint), y = r(1-cost)
+            // The velocity is v = sqrt(2gy).
+            // The arc length parameter s satisfies ds/dt = v.
+            // For cycloid, ds/dtheta = 2r sin(theta/2).
+            // So dtheta/dt = v / (ds/dtheta) = sqrt(2gr(1-cost)) / (2r sin(theta/2))
+            // Since 1-cost = 2 sin^2(theta/2), we have:
+            // dtheta/dt = sqrt(4gr sin^2(theta/2)) / (2r sin(theta/2)) = 2 sqrt(gr) sin(theta/2) / (2r sin(theta/2)) = sqrt(g/r).
+            // Thus theta(t) = sqrt(g/r) * t. Simple harmonic-like motion in theta!
+
+            const omega = Math.sqrt(g / r);
+            const totalTime = thetaStar / omega;
+
+            function animate(timestamp) {
+                if (!startTime) startTime = timestamp;
+                const progress = (timestamp - startTime) / 1000; // in seconds
+
+                if (progress >= totalTime) {
+                    // Snap to end
+                    const finalX = r * (thetaStar - Math.sin(thetaStar));
+                    const finalY = r * (1 - Math.cos(thetaStar));
+                    Plotly.restyle('curve-plot-div', { x: [[finalX]], y: [[finalY]] }, [2]);
+                    setTimeout(stopAnimation, 500);
+                    return;
+                }
+
+                const currentTheta = omega * progress;
+                const px = r * (currentTheta - Math.sin(currentTheta));
+                const py = r * (1 - Math.cos(currentTheta));
+
+                Plotly.restyle('curve-plot-div', { x: [[px]], y: [[py]] }, [2]);
+                animationId = requestAnimationFrame(animate);
+            }
+
+            animationId = requestAnimationFrame(animate);
+        });
+
+        slider.addEventListener('input', updatePlot);
+        updatePlot();
+    </script>
+</body>
+
+</html>

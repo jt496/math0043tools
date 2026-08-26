@@ -1,0 +1,1122 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <title>Method of Lagrange Multipliers</title>
+    <!-- Use matching fonts or generic nice sans-serif -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js" async></script>
+    <style>
+        html {
+            font-size: 85%;
+        }
+
+        :root {
+            --primary: #eebb22;
+            --primary-hover: #ffcc33;
+            --bg-dark: #0f1115;
+            --panel-bg: rgba(20, 24, 30, 0.95);
+            --text-main: #e2e8f0;
+            --text-muted: #94a3b8;
+            --accent-red: #ff5555;
+            --accent-green: #4ade80;
+            --accent-blue: #60a5fa;
+        }
+
+        body {
+            margin: 0;
+            overflow: hidden;
+            background-color: var(--bg-dark);
+            color: var(--text-main);
+            font-family: 'Inter', sans-serif;
+            display: flex;
+            height: 100vh;
+        }
+
+        #sidebar {
+            width: 46vh;
+            padding: 30px;
+            background: var(--panel-bg);
+            z-index: 10;
+            box-shadow: 4px 0 20px rgba(0, 0, 0, 0.6);
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            border-right: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        #sidebar::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        #sidebar::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        #sidebar::-webkit-scrollbar-thumb {
+            background-color: rgba(255, 255, 255, 0.2);
+            border-radius: 4px;
+        }
+
+        #canvas-container {
+            flex-grow: 1;
+            position: relative;
+        }
+
+        h1 {
+            font-size: 3.4rem;
+            font-weight: 800;
+            color: var(--primary);
+            margin-top: 0;
+            margin-bottom: 20px;
+            letter-spacing: -0.5px;
+        }
+
+        p {
+            font-size: 2.1rem;
+            line-height: 1.6;
+            color: var(--text-main);
+            margin-bottom: 15px;
+        }
+
+        .control-group {
+            margin-top: 25px;
+            background: rgba(0, 0, 0, 0.3);
+            padding: 20px;
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        .control-group label {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 24px;
+            color: var(--text-muted);
+            font-weight: 600;
+            font-size: 1.8rem;
+        }
+
+        input[type=range] {
+            width: 100%;
+            accent-color: var(--primary);
+            height: 12px;
+            border-radius: 6px;
+            outline: none;
+            margin-bottom: 30px;
+        }
+
+        .btn {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            width: 100%;
+            padding: 24px;
+            background: var(--primary);
+            color: #000;
+            border: none;
+            font-size: 2rem;
+            font-weight: 800;
+            border-radius: 16px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .btn:hover {
+            background: var(--primary-hover);
+            transform: translateY(-2px);
+        }
+
+        .btn:active {
+            transform: translateY(2px);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            font-size: 1.4rem;
+        }
+
+        table th,
+        table td {
+            text-align: left;
+            padding: 12px 5px;
+            border-bottom: 2px solid rgba(255, 255, 255, 0.1);
+        }
+
+        table th {
+            color: var(--text-muted);
+            font-weight: 600;
+        }
+
+        table td {
+            font-family: 'Courier New', Courier, monospace;
+            color: var(--accent-blue);
+            text-align: right;
+        }
+
+        .status-box {
+            margin-top: 40px;
+            padding: 20px;
+            border-radius: 16px;
+            background: rgba(0, 0, 0, 0.4);
+            text-align: center;
+            font-weight: 600;
+            min-height: 100px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            border: 2px solid transparent;
+            transition: all 0.3s ease;
+            font-size: 1.6rem;
+        }
+
+        .status-box .subtext {
+            font-size: 1.1rem;
+            font-weight: 400;
+            margin-top: 8px;
+        }
+
+        .legend {
+            margin-top: 40px;
+            font-size: 1.8rem;
+            color: var(--text-muted);
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+
+        .legend-color {
+            width: 16px;
+            height: 16px;
+            border-radius: 4px;
+            margin-right: 10px;
+            display: inline-block;
+        }
+
+        canvas {
+            display: block;
+            outline: none;
+        }
+
+        #loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 1.2rem;
+            color: var(--primary);
+            pointer-events: none;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="sidebar">
+        <a href="index.html"
+            style="display: inline-block; margin-bottom: 20px; color: var(--accent-blue); text-decoration: none; font-weight: 600;">&larr;
+            Back to CoV Home</a>
+        <h1>Lagrange Multipliers</h1>
+
+        <!-- <p>
+            The method of Lagrange multipliers is an elegant strategy for finding the local maxima and minima of a
+            function subject to equality constraints.
+        </p> -->
+
+        <div class="control-group" style="margin-top: 15px;">
+            <label style="margin-bottom: 10px;">Select Scenario</label>
+            <select id="scenario-select"
+                style="width: 100%; padding: 16px; border-radius: 12px; background: rgba(0,0,0,0.5); color: var(--text-main); border: 1px solid rgba(255,255,255,0.1); font-size: 1.8rem; margin-bottom: 20px; cursor: pointer;">
+                <option value="saddle-cylinder">f(x, y) = x² - y²,&nbsp; g(x, y) = x² + y² = 1</option>
+                <option value="plane-cylinder">f(x, y) = x + y,&nbsp; g(x, y) = x² + y² = 1</option>
+                <option value="paraboloid-line">f(x, y) = x² + y²,&nbsp; g(x, y) = x + y = 1</option>
+            </select>
+
+            <ul id="scenario-desc"
+                style="color: var(--text-main); margin-bottom: 15px; margin-top: 10px; line-height: 1.6; padding-left: 40px; font-size: 1.8rem;">
+                <li><strong>Objective:</strong> \( f(x,y) = x^2 - y^2 \)</li>
+                <li><strong>Constraint:</strong> \( g(x,y) = x^2 + y^2 = 1 \)</li>
+                <li><strong>Extrema:</strong> Max at \(c=1\), Min at \(c=-1\)</li>
+            </ul>
+        </div>
+
+        <div class="control-group" style="margin-top: 15px;">
+            <div style="margin-bottom: 20px; color: var(--text-muted); font-weight: 600; font-size: 1.8rem;">Animation
+                Mode</div>
+            <div style="display: flex; gap: 30px; margin-bottom: 15px;">
+                <label
+                    style="cursor: pointer; display: flex; align-items: center; color: var(--text-main); font-size: 1.8rem;">
+                    <input type="radio" name="view-mode" value="level" checked
+                        style="margin-right: 10px; accent-color: var(--primary); transform: scale(1.5);"> Level Set
+                </label>
+                <label
+                    style="cursor: pointer; display: flex; align-items: center; color: var(--text-main); font-size: 1.8rem;">
+                    <input type="radio" name="view-mode" value="particle"
+                        style="margin-right: 10px; accent-color: var(--primary); transform: scale(1.5);"> Particle
+                </label>
+            </div>
+
+            <label>
+                <span id="slider-label">Level Set \( f(x,y) = c \)</span>
+                <span id="c-value" style="color: var(--primary);">0.00</span>
+            </label>
+            <input type="range" id="c-slider" min="-2" max="2" step="0.01" value="0">
+
+            <label style="margin-top: 15px;">
+                <span>Animation Speed</span>
+                <span id="speed-value" style="color: var(--primary);">1.0x</span>
+            </label>
+            <input type="range" id="speed-slider" min="0.1" max="3.0" step="0.1" value="1.0">
+
+            <div style="display: flex; gap: 10px; margin-top: 15px;">
+                <button class="btn" id="play-btn"
+                    style="flex: 1; padding: 15px; font-size: 1.5rem; margin-top: 0; margin-bottom: 0;">▶
+                    Animate</button>
+                <button class="btn" id="reset-btn"
+                    style="flex: 1; padding: 15px; font-size: 1.5rem; margin-top: 0; margin-bottom: 0; background: var(--text-muted); color: white;">🔄
+                    Reset</button>
+            </div>
+        </div>
+
+        <div class="control-group">
+            <h3 style="margin-top: 0; color: var(--text-main); font-size: 1.1rem;">Gradient Analysis (2D Plane)</h3>
+            <table>
+                <tr>
+                    <th>\( \nabla f \) at pt 1</th>
+                    <td id="grad-f-val" style="color: var(--primary);">[1.00, 1.00]</td>
+                </tr>
+                <tr>
+                    <th>\( \nabla g \) at pt 1</th>
+                    <td id="grad-g-1" style="color: var(--accent-red);">N/A</td>
+                </tr>
+                <tr>
+                    <th>\( \nabla g \) at pt 2</th>
+                    <td id="grad-g-2" style="color: var(--accent-red);">N/A</td>
+                </tr>
+            </table>
+            <div id="status-box" class="status-box">
+                Awaiting connection...
+            </div>
+        </div>
+
+        <div class="legend">
+            <div class="legend-item" id="toggle-f" style="cursor: pointer; transition: opacity 0.2s;"
+                title="Click to toggle visibility">
+                <div class="legend-color" style="background: rgba(96, 165, 250, 0.6);"></div>
+                <span id="legend-f-text">Surface \( z = f(x,y) = x+y \)</span>
+            </div>
+            <div class="legend-item" id="toggle-g" style="cursor: pointer; transition: opacity 0.2s;"
+                title="Click to toggle visibility">
+                <div class="legend-color" style="background: rgba(255, 85, 85, 0.4); border: 1px solid #ff5555;"></div>
+                <span id="legend-g-text">Constraint \( g(x,y) = x^2 + y^2 = 1 \)</span>
+            </div>
+            <div class="legend-item" id="toggle-gradf" style="cursor: pointer; transition: opacity 0.2s;"
+                title="Click to toggle visibility">
+                <div class="legend-color" style="background: #eebb22;"></div>
+                <span>Level Set & \( \nabla f \)</span>
+            </div>
+            <div class="legend-item" id="toggle-gradg" style="cursor: pointer; transition: opacity 0.2s;"
+                title="Click to toggle visibility">
+                <div class="legend-color" style="background: #ff5555;"></div>
+                <span>Constraint Contour & \( \nabla g \)</span>
+            </div>
+            <div class="legend-item" id="toggle-tube" style="cursor: pointer; transition: opacity 0.2s;"
+                title="Click to toggle visibility">
+                <div class="legend-color" style="background: #a855f7;"></div>
+                <span>Feasible Set</span>
+            </div>
+            <div class="legend-item" id="toggle-axes" style="cursor: pointer; transition: opacity 0.2s; opacity: 0.4;"
+                title="Click to toggle visibility">
+                <div class="legend-color" style="background: #ffffff; border: 1px solid #444;"></div>
+                <span>3D Axes & Grid</span>
+            </div>
+        </div>
+    </div>
+
+    <div id="canvas-container">
+        <div id="loading">Loading 3D Engine...</div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+
+    <script>
+        // Init Document elements
+        const container = document.getElementById('canvas-container');
+        const loading = document.getElementById('loading');
+
+        // Remove loading text
+        loading.style.display = 'none';
+
+        // -------------------------
+        // THREE.JS SCENE SETUP
+        // -------------------------
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color('#0f1115');
+        // Add subtle fog to blend into background
+        scene.fog = new THREE.FogExp2('#0f1115', 0.05);
+
+        const camera = new THREE.PerspectiveCamera(50, container.clientWidth / container.clientHeight, 0.1, 100);
+        camera.position.set(-4.195, 9.009, 0.946);
+        camera.up.set(0, 0, 1); // Z is up
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
+        renderer.setSize(container.clientWidth, container.clientHeight);
+        renderer.setPixelRatio(window.devicePixelRatio);
+        container.appendChild(renderer.domElement);
+
+        const controls = new THREE.OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.dampingFactor = 0.05;
+        controls.target.set(-0.648, -0.366, -0.204);
+        controls.autoRotate = false;
+        controls.autoRotateSpeed = 0.5;
+
+        // -------------------------
+        // LIGHTING
+        // -------------------------
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+        scene.add(ambientLight);
+
+        const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
+        dirLight.position.set(5, 10, 8);
+        scene.add(dirLight);
+
+        const dirLight2 = new THREE.DirectionalLight(0xaaccff, 0.4);
+        dirLight2.position.set(-5, -5, 2);
+        scene.add(dirLight2);
+
+        // -------------------------
+        // DYNAMIC SCENARIO STATE
+        // -------------------------
+        let currentScenario = 'saddle-cylinder';
+
+        const scenarios = {
+            'saddle-cylinder': {
+                desc: `<li><strong>Objective:</strong> \\( f(x,y) = x^2 - y^2 \\)</li><li><strong>Constraint:</strong> \\( g(x,y) = x^2 + y^2 = 1 \\)</li><li><strong>Extrema:</strong> Max at \\(c=1\\), Min at \\(c=-1\\)</li>`,
+                f: (x, y) => x * x - y * y,
+                fLabel: "x^2 - y^2",
+                gLabel: "x² + y² = 1",
+                bounds: [-1.5, 1.5],
+                R: 1.0,
+                cameraPos: new THREE.Vector3(-4.195, 9.009, 0.946),
+                targetPos: new THREE.Vector3(-0.648, -0.366, -0.204),
+                gradF: (x, y) => new THREE.Vector3(2 * x, -2 * y, 0),
+                gradG: (x, y) => new THREE.Vector3(2 * x, 2 * y, 0),
+                tubeCurve: class extends THREE.Curve {
+                    getPoint(t, opt = new THREE.Vector3()) {
+                        const th = t * Math.PI * 2;
+                        const x = Math.cos(th), y = Math.sin(th);
+                        return opt.set(x, y, x * x - y * y);
+                    }
+                },
+                solveIntersections: (c) => {
+                    if (c > 1.02 || c < -1.02) return { type: 'none' };
+                    // x^2 - y^2 = c, x^2 + y^2 = 1 => 2x^2 = 1+c => x = +-sqrt((1+c)/2)
+                    // 2y^2 = 1-c => y = +-sqrt((1-c)/2)
+                    if (Math.abs(c - 1) <= 0.05) {
+                        return { type: 'tangent', pts: [[1, 0], [-1, 0]] };
+                    }
+                    if (Math.abs(c + 1) <= 0.05) {
+                        return { type: 'tangent', pts: [[0, 1], [0, -1]] };
+                    }
+                    const xval = Math.sqrt((1 + c) / 2);
+                    const yval = Math.sqrt((1 - c) / 2);
+                    return { type: 'secant', pts: [[xval, yval], [xval, -yval], [-xval, yval], [-xval, -yval]] };
+                }
+            },
+            'plane-cylinder': {
+                desc: `<li><strong>Objective:</strong> \\( f(x,y) = x + y \\)</li><li><strong>Constraint:</strong> \\( g(x,y) = x^2 + y^2 = 1 \\)</li><li><strong>Extrema:</strong> Max at \\(c=\\sqrt{2}\\), Min at \\(c=-\\sqrt{2}\\)</li>`,
+                f: (x, y) => x + y,
+                fLabel: "x + y",
+                gLabel: "x² + y² = 1",
+                bounds: [-2, 2],
+                R: Math.sqrt(2), // Tangency boundary
+                cameraPos: new THREE.Vector3(-9.151, -0.508, 5.455),
+                targetPos: new THREE.Vector3(0.430, -0.051, -0.288),
+                gradF: (x, y) => new THREE.Vector3(1, 1, 0),
+                gradG: (x, y) => new THREE.Vector3(2 * x, 2 * y, 0),
+                tubeCurve: class extends THREE.Curve {
+                    getPoint(t, opt = new THREE.Vector3()) {
+                        const th = t * Math.PI * 2;
+                        const x = Math.cos(th), y = Math.sin(th);
+                        return opt.set(x, y, x + y);
+                    }
+                },
+                solveIntersections: (c) => {
+                    const delta = 8 - 4 * c * c;
+                    if (delta < -0.01) return { type: 'none' };
+                    if (delta <= 0.05) {
+                        return { type: 'tangent', pts: [[c / 2, c / 2]] };
+                    }
+                    const x1 = (2 * c + Math.sqrt(delta)) / 4, y1 = c - x1;
+                    const x2 = (2 * c - Math.sqrt(delta)) / 4, y2 = c - x2;
+                    return { type: 'secant', pts: [[x1, y1], [x2, y2]] };
+                }
+            },
+            'paraboloid-line': {
+                desc: `<li><strong>Objective:</strong> \\( f(x,y) = x^2 + y^2 \\)</li><li><strong>Constraint:</strong> \\( g(x,y) = x + y = 1 \\)</li><li><strong>Extrema:</strong> Min at \\(c=0.5\\)</li>`,
+                f: (x, y) => x * x + y * y,
+                fLabel: "x^2 + y^2",
+                gLabel: "x + y = 1",
+                bounds: [-1, 3],
+                R: 0.5,
+                cameraPos: new THREE.Vector3(-3.702, 18.792, 3.423),
+                targetPos: new THREE.Vector3(-0.343, -2.232, 4.121),
+                gradF: (x, y) => new THREE.Vector3(2 * x, 2 * y, 0),
+                gradG: (x, y) => new THREE.Vector3(1, 1, 0),
+                bottomZ: -0.5,
+                tubeCurve: class extends THREE.Curve {
+                    getPoint(t, opt = new THREE.Vector3()) {
+                        // Line: from x=-2 to x=3. Length = 5.
+                        const x = -2 + t * 5;
+                        const y = 1 - x;
+                        return opt.set(x, y, x * x + y * y);
+                    }
+                },
+                solveIntersections: (c) => {
+                    // x^2 + (1-x)^2 = c => 2x^2 - 2x + (1-c) = 0
+                    // delta = 4 - 8(1-c) = 8c - 4
+                    const delta = 8 * c - 4;
+                    if (delta < -0.01) return { type: 'none' };
+                    if (delta <= 0.05) {
+                        return { type: 'tangent', pts: [[0.5, 0.5]] };
+                    }
+                    const x1 = (2 + Math.sqrt(delta)) / 4, y1 = 1 - x1;
+                    const x2 = (2 - Math.sqrt(delta)) / 4, y2 = 1 - x2;
+                    return { type: 'secant', pts: [[x1, y1], [x2, y2]] };
+                }
+            }
+        };
+
+        const scenarioDesc = document.getElementById('scenario-desc');
+        const scenarioSelect = document.getElementById('scenario-select');
+
+        scenarioSelect.addEventListener('change', (e) => {
+            currentScenario = e.target.value;
+            const sc = scenarios[currentScenario];
+
+            // Update UI
+            scenarioDesc.innerHTML = sc.desc;
+            if (viewMode === 'level') {
+                slider.min = sc.bounds[0];
+                slider.max = sc.bounds[1];
+                slider.value = sc.bounds[0] + (sc.bounds[1] - sc.bounds[0]) / 2;
+                c = parseFloat(slider.value);
+            } else {
+                slider.min = 0;
+                slider.max = 1;
+                slider.step = 0.001;
+                slider.value = 0;
+            }
+
+            if (window.MathJax) {
+                MathJax.typesetPromise([scenarioDesc]).catch((err) => console.log(err.message));
+            }
+
+            // Update Camera view for specific scenarios
+            camera.position.copy(sc.cameraPos || new THREE.Vector3(-4.195, 9.009, 0.946));
+            controls.target.copy(sc.targetPos || new THREE.Vector3(-0.648, -0.366, -0.204));
+            controls.update();
+
+            // Rebuild Geometry
+            rebuildSceneForScenario(sc);
+            updateMath();
+        });
+
+        document.querySelectorAll('input[name="view-mode"]').forEach((radio) => {
+            radio.addEventListener('change', (e) => {
+                viewMode = e.target.value;
+                const sc = scenarios[currentScenario];
+                if (viewMode === 'level') {
+                    sliderLabel.innerHTML = 'Level Set \\( f(x,y) = c \\)';
+                    slider.min = sc.bounds[0];
+                    slider.max = sc.bounds[1];
+                    slider.step = 0.01;
+                    slider.value = sc.bounds[0] + (sc.bounds[1] - sc.bounds[0]) / 2;
+                } else {
+                    sliderLabel.innerHTML = 'Particle Position \\( t \\)';
+                    slider.min = 0;
+                    slider.max = 1;
+                    slider.step = 0.001;
+                    slider.value = 0; // reset to 0
+                }
+                if (window.MathJax) MathJax.typesetPromise([sliderLabel]).catch(e => console.log(e));
+                if (animating) toggleAnimation(); // Stop animation on mode switch
+                isPausedAtExtremum = false;
+                updateMath();
+            });
+        });
+
+        // -------------------------
+        // GEOMETRIES & MESHES (Globals)
+        // -------------------------
+        const bottomZ = -3.5;
+        const planeSize = 4.5;
+
+        // Global visibility state for legend toggles
+        const visibilityState = {
+            f: true,
+            g: true,
+            gradf: true,
+            gradg: true,
+            tube: true,
+            axes: false
+        };
+
+        let cylinder, tubeMesh, baseConstraint, planeMesh, planeWire;
+
+        function rebuildSceneForScenario(sc) {
+            // Remove old specific meshes
+            if (cylinder) scene.remove(cylinder);
+            if (tubeMesh) scene.remove(tubeMesh);
+            if (baseConstraint) scene.remove(baseConstraint);
+            if (planeMesh) scene.remove(planeMesh);
+            if (planeWire) scene.remove(planeWire);
+
+            // Rebuild Objective Surface f(x,y)
+            const planeGeom = new THREE.PlaneGeometry(planeSize, planeSize, 64, 64);
+            const posAttribute = planeGeom.attributes.position;
+            for (let i = 0; i < posAttribute.count; i++) {
+                const x = posAttribute.getX(i);
+                const y = posAttribute.getY(i);
+                posAttribute.setZ(i, sc.f(x, y));
+            }
+            planeGeom.computeVertexNormals();
+
+            const matParams = {
+                color: 0x3b82f6, transparent: true, opacity: 0.4, side: THREE.DoubleSide, shininess: 100, depthWrite: false
+            };
+
+            const mat = new THREE.MeshPhongMaterial(matParams);
+
+            mat.onBeforeCompile = function (shader) {
+                shader.vertexShader = `
+                    varying vec3 vGlobalPos;
+                    ${shader.vertexShader}
+                `.replace(
+                    `#include <begin_vertex>`,
+                    `#include <begin_vertex>
+                     vGlobalPos = position;`
+                );
+                shader.fragmentShader = `
+                    varying vec3 vGlobalPos;
+                    ${shader.fragmentShader}
+                `.replace(
+                    `#include <dithering_fragment>`,
+                    `#include <dithering_fragment>
+                     float contourInterval = 0.05;
+                     float f = abs(fract(vGlobalPos.z / contourInterval - 0.5) - 0.5);
+                     float df = fwidth(vGlobalPos.z / contourInterval);
+                     float line = smoothstep(df * 1.5, df * 0.5, f);
+
+                     // Make less opaque
+                     gl_FragColor.rgb = mix(gl_FragColor.rgb, vec3(1.0, 1.0, 1.0), line * 0.3);
+                     gl_FragColor.a = max(gl_FragColor.a, line * 0.4);
+                    `
+                );
+            };
+            // Make sure standard derivatives are supported by the shader
+            mat.extensions = { derivatives: true };
+
+            planeMesh = new THREE.Mesh(planeGeom, mat);
+            planeMesh.visible = visibilityState.f;
+            scene.add(planeMesh);
+
+            // Rebuild Constraint g(x,y) visually based on scenario
+            if (currentScenario.includes('cylinder')) {
+                const cylGeom = new THREE.CylinderGeometry(1, 1, 6.5, 64, 1, true);
+                cylGeom.rotateX(Math.PI / 2);
+                cylGeom.translate(0, 0, -0.25);
+                cylinder = new THREE.Mesh(cylGeom, new THREE.MeshPhongMaterial({
+                    color: 0xff5555, transparent: true, opacity: 0.15, side: THREE.DoubleSide, depthWrite: false, shininess: 80
+                }));
+                cylinder.visible = visibilityState.g;
+                scene.add(cylinder);
+
+                // Base Circle
+                const circlePts = [];
+                for (let i = 0; i <= 64; i++) {
+                    const theta = (i / 64) * Math.PI * 2;
+                    circlePts.push(new THREE.Vector3(Math.cos(theta), Math.sin(theta), bottomZ));
+                }
+                baseConstraint = new THREE.Line(new THREE.BufferGeometry().setFromPoints(circlePts), new THREE.LineBasicMaterial({ color: 0xff5555, linewidth: 2 }));
+                baseConstraint.visible = visibilityState.g;
+                scene.add(baseConstraint);
+            } else if (currentScenario === 'paraboloid-line') {
+                // Plane Constraint
+                const pGeom = new THREE.PlaneGeometry(6.5, 6.5);
+                pGeom.rotateX(Math.PI / 2); // Make it vertical (normal +Y)
+                pGeom.rotateZ(-Math.PI / 4); // Rotate normal to X+Y
+                pGeom.translate(0.5, 0.5, -0.25);
+                cylinder = new THREE.Mesh(pGeom, new THREE.MeshPhongMaterial({
+                    color: 0xff5555, transparent: true, opacity: 0.15, side: THREE.DoubleSide, depthWrite: false, shininess: 80
+                }));
+                cylinder.visible = visibilityState.g;
+                scene.add(cylinder);
+
+                // Base Line
+                const localBottomZ = sc.bottomZ !== undefined ? sc.bottomZ : bottomZ;
+                const linePts = [
+                    new THREE.Vector3(-3, 4, localBottomZ),
+                    new THREE.Vector3(4, -3, localBottomZ)
+                ];
+                baseConstraint = new THREE.Line(new THREE.BufferGeometry().setFromPoints(linePts), new THREE.LineBasicMaterial({ color: 0xff5555, linewidth: 2 }));
+                baseConstraint.visible = visibilityState.g;
+                scene.add(baseConstraint);
+            }
+
+            // Rebuild Intersection Tube
+            const tubeGeom = new THREE.TubeGeometry(new sc.tubeCurve(), 1000, 0.01, 16, currentScenario.includes('cylinder'));
+            tubeMesh = new THREE.Mesh(tubeGeom, new THREE.MeshPhongMaterial({ color: 0xa855f7, shininess: 100 }));
+            tubeMesh.visible = visibilityState.tube;
+            scene.add(tubeMesh);
+        }
+
+        // Shared static visual elements
+        const axesHelper = new THREE.AxesHelper(2.5);
+        axesHelper.visible = visibilityState.axes;
+        scene.add(axesHelper);
+
+        const levelGeom = new THREE.PlaneGeometry(planeSize + 0.5, planeSize + 0.5);
+        const levelMat = new THREE.MeshBasicMaterial({ color: 0xeebb22, transparent: true, opacity: 0.2, side: THREE.DoubleSide, depthWrite: false });
+        const levelPlane = new THREE.Mesh(levelGeom, levelMat);
+        // visibility will be handled by updateMath when it is called initially
+        scene.add(levelPlane);
+
+        const gridHelper = new THREE.GridHelper(5, 10, 0x444444, 0x222222);
+        gridHelper.rotation.x = Math.PI / 2;
+        // The grid is always placed at bottomZ but wait, we can adjust it based on scenario but it's initialized globally 
+        gridHelper.position.z = bottomZ;
+        gridHelper.visible = visibilityState.axes;
+        scene.add(gridHelper);
+
+        // Arrows & Dots pools
+        function createArrow(hex) {
+            return new THREE.ArrowHelper(new THREE.Vector3(1, 0, 0), new THREE.Vector3(0, 0, bottomZ), 1, hex, 0.25, 0.15);
+        }
+        const gradFArrows = [createArrow(0xeebb22), createArrow(0xeebb22), createArrow(0xeebb22), createArrow(0xeebb22)];
+        const gradGArrows = [createArrow(0xff5555), createArrow(0xff5555), createArrow(0xff5555), createArrow(0xff5555)];
+        const dots = [];
+        for (let i = 0; i < 4; i++) {
+            const dot = new THREE.Mesh(new THREE.CircleGeometry(0.08, 16), new THREE.MeshBasicMaterial({ color: 0xffffff }));
+            dot.position.z = bottomZ + 0.01;
+            dots.push(dot);
+            scene.add(dot);
+            scene.add(gradFArrows[i]);
+            scene.add(gradGArrows[i]);
+        }
+
+        // Initialize First Scenario
+        rebuildSceneForScenario(scenarios[currentScenario]);
+
+        // Particle mesh
+        const particleGeom = new THREE.SphereGeometry(0.036, 32, 32);
+        const particleMat = new THREE.MeshPhongMaterial({ color: 0xffaa00, emissive: 0xffaa00, emissiveIntensity: 0.5 });
+        const particleMesh = new THREE.Mesh(particleGeom, particleMat);
+        particleMesh.visible = false;
+        scene.add(particleMesh);
+
+        // -------------------------
+        // UI AND LOGIC
+        // -------------------------
+        let viewMode = 'level';
+        const sliderLabel = document.getElementById('slider-label');
+        const slider = document.getElementById('c-slider');
+        const speedSlider = document.getElementById('speed-slider');
+        const speedValueSpan = document.getElementById('speed-value');
+        const cValueSpan = document.getElementById('c-value');
+        const gradFValSpan = document.getElementById('grad-f-val');
+        const gradG1Span = document.getElementById('grad-g-1');
+        const gradG2Span = document.getElementById('grad-g-2');
+        const statusBox = document.getElementById('status-box');
+
+        const legendFText = document.getElementById('legend-f-text');
+        const legendGText = document.getElementById('legend-g-text');
+
+        let targetC = 0;
+        let c = 0;
+
+        function updateMath() {
+            const sc = scenarios[currentScenario];
+
+            // Re-render legend to match equations
+            if (legendFText) legendFText.innerHTML = `Surface \\( z = f(x,y) = ${sc.fLabel} \\)`;
+            if (legendGText) legendGText.innerHTML = `Constraint \\( g(x,y) : ${sc.gLabel} \\)`;
+            if (window.MathJax) {
+                MathJax.typesetPromise([legendFText, legendGText]).catch((e) => console.log(e.message));
+            }
+            // Hide all markers initially
+            for (let i = 0; i < 4; i++) {
+                gradFArrows[i].visible = false;
+                gradGArrows[i].visible = false;
+                dots[i].visible = false;
+            }
+
+            if (viewMode === 'particle') {
+                const t = parseFloat(slider.value);
+                cValueSpan.textContent = t.toFixed(3);
+
+                const pt3D = new sc.tubeCurve().getPoint(t);
+                const x = pt3D.x;
+                const y = pt3D.y;
+                c = sc.f(x, y);
+
+                const localBottomZ = sc.bottomZ !== undefined ? sc.bottomZ : bottomZ;
+
+                levelPlane.visible = false;
+                particleMesh.position.copy(pt3D);
+                particleMesh.visible = true;
+
+                const gF = sc.gradF(x, y);
+                const gG = sc.gradG(x, y);
+                const cross2D = gF.x * gG.y - gF.y * gG.x;
+
+                // Cross product approaches 0 at tangency
+                const isTangent = Math.abs(cross2D) < 0.1;
+
+                dots[0].position.set(x, y, localBottomZ + 0.01);
+                dots[0].visible = visibilityState.gradf || visibilityState.gradg;
+
+                if (gF.lengthSq() > 0) {
+                    gradFArrows[0].position.set(x, y, localBottomZ);
+                    gradFArrows[0].setDirection(gF.clone().normalize());
+                    gradFArrows[0].setLength(Math.max(0.5, gF.length() * 0.4));
+                    gradFArrows[0].visible = visibilityState.gradf;
+                }
+                if (gG.lengthSq() > 0) {
+                    gradGArrows[0].position.set(x, y, localBottomZ);
+                    gradGArrows[0].setDirection(gG.clone().normalize());
+                    gradGArrows[0].setLength(Math.max(0.5, gG.length() * 0.4));
+                    gradGArrows[0].visible = visibilityState.gradg;
+                }
+
+                gradG1Span.textContent = `[${gG.x.toFixed(2)}, ${gG.y.toFixed(2)}]`;
+                gradFValSpan.textContent = `[${gF.x.toFixed(2)}, ${gF.y.toFixed(2)}]`;
+                gradG2Span.textContent = 'N/A';
+
+                if (isTangent) {
+                    gradG1Span.style.color = "var(--accent-green)";
+                    statusBox.innerHTML = `🌟 Tangent! \\( \\nabla f = \\lambda \\nabla g \\)<div class="subtext" style="color:var(--accent-green);">Extremal point!</div>`;
+                    statusBox.style.borderColor = "var(--accent-green)";
+                    statusBox.style.background = "rgba(74, 222, 128, 0.1)";
+                    statusBox.style.color = "white";
+                    if (window.MathJax) MathJax.typesetPromise([statusBox]).catch((err) => console.log(err.message));
+                } else {
+                    gradG1Span.style.color = "var(--accent-red)";
+                    statusBox.innerHTML = `Moving on Constraint.<div class="subtext" style="color:#aaa;">Gradients not parallel.</div>`;
+                    statusBox.style.borderColor = "var(--text-muted)";
+                    statusBox.style.background = "rgba(148, 163, 184, 0.1)";
+                    statusBox.style.color = "var(--text-main)";
+                }
+
+                return;
+            }
+
+            particleMesh.visible = false;
+            levelPlane.visible = visibilityState.gradf;
+
+            c = parseFloat(slider.value);
+            cValueSpan.textContent = (c > 0 ? "+" : "") + c.toFixed(2);
+            levelPlane.position.z = c;
+
+            const res = sc.solveIntersections(c);
+
+            if (res.type === 'none') {
+                gradG1Span.textContent = 'None';
+                gradG2Span.textContent = 'None';
+                gradFValSpan.textContent = 'None';
+                gradG1Span.style.color = "var(--text-muted)";
+                gradG2Span.style.color = "var(--text-muted)";
+                gradFValSpan.style.color = "var(--text-muted)";
+                statusBox.innerHTML = `No Intersection.<div class="subtext" style="color:var(--accent-red);">Constraint cannot be satisfied.</div>`;
+                statusBox.style.borderColor = "var(--accent-red)";
+                statusBox.style.background = "rgba(255, 85, 85, 0.1)";
+                statusBox.style.color = "white";
+                return;
+            }
+
+            // Draw points & gradients
+            const localBottomZ = sc.bottomZ !== undefined ? sc.bottomZ : bottomZ;
+            res.pts.forEach((pt, i) => {
+                const [x, y] = pt;
+                dots[i].position.set(x, y, localBottomZ + 0.01);
+                dots[i].visible = visibilityState.gradf || visibilityState.gradg;
+
+                const gF = sc.gradF(x, y);
+                if (gF.lengthSq() > 0) {
+                    gradFArrows[i].position.set(x, y, localBottomZ);
+                    gradFArrows[i].setDirection(gF.clone().normalize());
+                    gradFArrows[i].setLength(Math.max(0.5, gF.length() * 0.4));
+                    gradFArrows[i].visible = visibilityState.gradf;
+                }
+
+                const gG = sc.gradG(x, y);
+                if (gG.lengthSq() > 0) {
+                    gradGArrows[i].position.set(x, y, localBottomZ);
+                    gradGArrows[i].setDirection(gG.clone().normalize());
+                    // Reverse vector direction for visualizing opposing gradients nicely if they are antiparallel
+                    gradGArrows[i].setLength(Math.max(0.5, gG.length() * 0.4));
+                    gradGArrows[i].visible = visibilityState.gradg;
+                }
+            });
+
+            if (res.pts.length > 0) {
+                gradG1Span.textContent = `[${sc.gradG(res.pts[0][0], res.pts[0][1]).x.toFixed(2)}, ${sc.gradG(res.pts[0][0], res.pts[0][1]).y.toFixed(2)}]`;
+                gradFValSpan.textContent = `[${sc.gradF(res.pts[0][0], res.pts[0][1]).x.toFixed(2)}, ${sc.gradF(res.pts[0][0], res.pts[0][1]).y.toFixed(2)}]`;
+            }
+            if (res.pts.length > 1) gradG2Span.textContent = `[${sc.gradG(res.pts[1][0], res.pts[1][1]).x.toFixed(2)}, ${sc.gradG(res.pts[1][0], res.pts[1][1]).y.toFixed(2)}]`;
+            else gradG2Span.textContent = 'N/A';
+
+            if (res.type === 'tangent') {
+                gradG1Span.style.color = "var(--accent-green)";
+                gradG2Span.style.color = "var(--accent-green)";
+                statusBox.innerHTML = `🌟 Tangent! \\( \\nabla f = \\lambda \\nabla g \\)<div class="subtext" style="color:var(--accent-green);">Extremal point!</div>`;
+                statusBox.style.borderColor = "var(--accent-green)";
+                statusBox.style.background = "rgba(74, 222, 128, 0.1)";
+                statusBox.style.color = "white";
+                if (window.MathJax) MathJax.typesetPromise([statusBox]).catch((err) => console.log(err.message));
+            } else {
+                gradG1Span.style.color = "var(--accent-red)";
+                gradG2Span.style.color = "var(--accent-red)";
+                statusBox.innerHTML = `Intersecting.<div class="subtext" style="color:#aaa;">Gradients not parallel, can still move!</div>`;
+                statusBox.style.borderColor = "var(--text-muted)";
+                statusBox.style.background = "rgba(148, 163, 184, 0.1)";
+                statusBox.style.color = "var(--text-main)";
+            }
+        }
+
+        speedSlider.addEventListener('input', (e) => {
+            speedValueSpan.textContent = parseFloat(e.target.value).toFixed(1) + 'x';
+        });
+
+        slider.addEventListener('input', () => {
+            targetC = parseFloat(slider.value);
+            // manually moving slider forces stop animation
+            if (animating) toggleAnimation();
+            isPausedAtExtremum = false;
+            updateMath();
+        });
+
+        // -------------------------
+        // ANIMATION LOOP
+        // -------------------------
+        let animating = false;
+        let time = 0;
+        let particleDir = 1;
+        let isPausedAtExtremum = false;
+        let pauseTimer = 0;
+        const playBtn = document.getElementById('play-btn');
+
+        function toggleAnimation() {
+            animating = !animating;
+            const sc = scenarios[currentScenario];
+            if (animating) {
+                playBtn.innerHTML = '⏸ Pause';
+                playBtn.style.background = 'var(--text-muted)';
+                playBtn.style.color = 'white';
+                if (viewMode === 'level') {
+                    time = Math.asin(Math.max(-1, Math.min(1, c / (sc.R + 0.4)))); // sync time to current c
+                    if (isNaN(time)) time = 0;
+                }
+                isPausedAtExtremum = false;
+            } else {
+                playBtn.innerHTML = '▶ Animate';
+                playBtn.style.background = 'var(--primary)';
+                playBtn.style.color = '#000';
+            }
+        }
+
+        playBtn.addEventListener('click', toggleAnimation);
+
+        const resetBtn = document.getElementById('reset-btn');
+        resetBtn.addEventListener('click', () => {
+            if (animating) toggleAnimation();
+            slider.value = 0;
+            time = 0;
+            isPausedAtExtremum = false;
+
+            // Reset camera to scenario specific view
+            const sc = scenarios[currentScenario];
+            camera.position.copy(sc.cameraPos || new THREE.Vector3(-4.195, 9.009, 0.946));
+            controls.target.copy(sc.targetPos || new THREE.Vector3(-0.648, -0.366, -0.204));
+            controls.update();
+
+            updateMath();
+        });
+
+        const clock = new THREE.Clock();
+
+        // -------------------------
+        // TOGGLE LEGEND ITEMS
+        // -------------------------
+
+        function setupToggle(id, key) {
+            const el = document.getElementById(id);
+            if (!el) return;
+
+            // Optional hover effect
+            el.addEventListener('mouseenter', () => el.style.background = 'rgba(255,255,255,0.05)');
+            el.addEventListener('mouseleave', () => el.style.background = 'transparent');
+            el.style.padding = '5px 8px';
+            el.style.borderRadius = '6px';
+            el.style.margin = '0 -8px 16px -8px';
+
+            el.addEventListener('click', () => {
+                visibilityState[key] = !visibilityState[key];
+                el.style.opacity = visibilityState[key] ? '1' : '0.4';
+
+                // Static updates
+                if (key === 'f' && planeMesh) planeMesh.visible = visibilityState.f;
+                if (key === 'g') {
+                    if (cylinder) cylinder.visible = visibilityState.g;
+                    if (baseConstraint) baseConstraint.visible = visibilityState.g;
+                }
+                if (key === 'tube' && tubeMesh) tubeMesh.visible = visibilityState.tube;
+                if (key === 'axes') {
+                    if (axesHelper) axesHelper.visible = visibilityState.axes;
+                    if (gridHelper) gridHelper.visible = visibilityState.axes;
+                }
+
+                updateMath(); // Also triggers updates to dynamic elements
+            });
+        }
+
+        setupToggle('toggle-f', 'f');
+        setupToggle('toggle-g', 'g');
+        setupToggle('toggle-gradf', 'gradf');
+        setupToggle('toggle-gradg', 'gradg');
+        setupToggle('toggle-tube', 'tube');
+        setupToggle('toggle-axes', 'axes');
+
+        // Let's run initial math update
+        updateMath();
+
+        function animate() {
+            requestAnimationFrame(animate);
+
+            const dt = clock.getDelta();
+
+            controls.update();
+
+            if (animating) {
+                const sc = scenarios[currentScenario];
+                if (isPausedAtExtremum) {
+                    pauseTimer -= dt;
+                    if (pauseTimer <= 0) {
+                        isPausedAtExtremum = false;
+                        if (viewMode === 'particle') {
+                            let newVal = parseFloat(slider.value) + 0.005 * particleDir;
+                            if (newVal > 1) {
+                                newVal = currentScenario.includes('cylinder') ? newVal % 1 : 1 - (newVal - 1);
+                                if (!currentScenario.includes('cylinder')) particleDir = -1;
+                            } else if (newVal < 0) {
+                                newVal = currentScenario.includes('cylinder') ? 1 + newVal : -newVal;
+                                if (!currentScenario.includes('cylinder')) particleDir = 1;
+                            }
+                            slider.value = newVal;
+                            updateMath();
+                        }
+                    }
+                } else {
+                    const speed = parseFloat(speedSlider.value);
+
+                    if (viewMode === 'level') {
+                        const swingMax = sc.R + 0.4;
+                        const prevC = Math.sin(time) * swingMax;
+                        time += dt * 0.8 * speed;
+                        const nextC = Math.sin(time) * swingMax;
+
+                        let crossedExtremum = false;
+                        let extremumVal = 0;
+
+                        if ((prevC < sc.R && nextC >= sc.R) || (prevC > sc.R && nextC <= sc.R)) {
+                            crossedExtremum = true;
+                            extremumVal = sc.R;
+                        } else if ((prevC < -sc.R && nextC >= -sc.R) || (prevC > -sc.R && nextC <= -sc.R)) {
+                            crossedExtremum = true;
+                            extremumVal = -sc.R;
+                        }
+
+                        if (crossedExtremum) {
+                            slider.value = extremumVal;
+                            updateMath();
+                            isPausedAtExtremum = true;
+                            pauseTimer = 1.5;
+                        } else {
+                            slider.value = nextC;
+                            updateMath();
+                        }
+                    } else if (viewMode === 'particle') {
+                        const prevT = parseFloat(slider.value);
+                        // Make particle move slow so it's visible, scale speed setting
+                        let nextT = prevT + dt * speed * 0.15 * particleDir;
+
+                        if (nextT > 1) {
+                            if (currentScenario.includes('cylinder')) {
+                                nextT = nextT % 1;
+                            } else {
+                                nextT = 1 - (nextT - 1);
+                                particleDir = -1;
+                            }
+                        } else if (nextT < 0) {
+                            if (currentScenario.includes('cylinder')) {
+                                nextT = 1 + nextT;
+                            } else {
+                                nextT = -nextT;
+                                particleDir = 1;
+                            }
+                        }
+
+                        // compute tangency crossing
+                        const ptPrev = new sc.tubeCurve().getPoint(prevT);
+                        const gFPrev = sc.gradF(ptPrev.x, ptPrev.y);
+                        const gGPrev = sc.gradG(ptPrev.x, ptPrev.y);
+                        const crossPrev = gFPrev.x * gGPrev.y - gFPrev.y * gGPrev.x;
+
+                        const ptNext = new sc.tubeCurve().getPoint(nextT);
+                        const gFNext = sc.gradF(ptNext.x, ptNext.y);
+                        const gGNext = sc.gradG(ptNext.x, ptNext.y);
+                        const crossNext = gFNext.x * gGNext.y - gFNext.y * gGNext.x;
+
+                        if (crossPrev * crossNext < 0) {
+                            isPausedAtExtremum = true;
+                            pauseTimer = 1.5;
+                            // Approximate the root
+                            let rootT = prevT - crossPrev * (nextT - prevT) / (crossNext - crossPrev);
+                            slider.value = rootT;
+                            updateMath();
+                        } else {
+                            // If just moving normally
+                            slider.value = nextT;
+                            updateMath();
+                        }
+                    }
+                }
+            }
+
+            renderer.render(scene, camera);
+        }
+
+        animate();
+
+        // Ensure button UI matches paused state on load
+        playBtn.innerHTML = '▶ Animate';
+        playBtn.style.background = 'var(--primary)';
+        playBtn.style.color = '#000';
+
+        window.addEventListener('resize', () => {
+            camera.aspect = container.clientWidth / container.clientHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(container.clientWidth, container.clientHeight);
+        });
+    </script>
+</body>
+
+</html>

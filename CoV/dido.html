@@ -1,0 +1,628 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Dido's Problem</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js" async></script>
+    <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+    <style>
+        :root {
+            --primary: #eebb22;
+            --primary-hover: #ffcc33;
+            --bg-dark: #0f1115;
+            --panel-bg: rgba(20, 24, 30, 0.95);
+            --text-main: #e2e8f0;
+            --text-muted: #94a3b8;
+            --accent-red: #ff5555;
+            --accent-green: #4ade80;
+            --accent-blue: #60a5fa;
+            --accent-purple: #a855f7;
+        }
+
+        body {
+            margin: 0;
+            background-color: var(--bg-dark);
+            color: var(--text-main);
+            font-family: 'Inter', sans-serif;
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        #sidebar {
+            width: 450px;
+            padding: 30px;
+            background: var(--panel-bg);
+            z-index: 10;
+            box-shadow: 4px 0 20px rgba(0, 0, 0, 0.6);
+            overflow-y: auto;
+            border-right: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        #sidebar::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        #sidebar::-webkit-scrollbar-thumb {
+            background-color: rgba(255, 255, 255, 0.2);
+            border-radius: 4px;
+        }
+
+        #plot-container {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            background-color: var(--bg-dark);
+            height: 100vh;
+        }
+
+        #plotly-div,
+        #arc-plot-div {
+            flex: 1;
+            width: 100%;
+        }
+
+        #plotly-div {
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        h1 {
+            font-size: 2.2rem;
+            font-weight: 800;
+            color: var(--primary);
+            margin-top: 0;
+            margin-bottom: 20px;
+            letter-spacing: -0.5px;
+        }
+
+        h2 {
+            font-size: 1.5rem;
+            color: var(--text-main);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            padding-bottom: 10px;
+            margin-top: 30px;
+        }
+
+        p,
+        li {
+            font-size: 1.1rem;
+            line-height: 1.6;
+            color: var(--text-main);
+            margin-bottom: 15px;
+        }
+
+        .control-group {
+            margin-top: 25px;
+            background: rgba(0, 0, 0, 0.3);
+            padding: 20px;
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        .control-group label {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 15px;
+            color: var(--text-muted);
+            font-weight: 600;
+            font-size: 1.1rem;
+            align-items: center;
+        }
+
+        input[type=range] {
+            width: 100%;
+            accent-color: var(--primary);
+            height: 8px;
+            border-radius: 4px;
+            outline: none;
+            margin-bottom: 10px;
+            cursor: pointer;
+        }
+
+        .stat-box {
+            background: rgba(0, 0, 0, 0.4);
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            font-family: 'Courier New', monospace;
+            font-size: 1.1rem;
+            color: var(--accent-green);
+            margin-top: 15px;
+            text-align: center;
+            font-weight: bold;
+        }
+
+        .solution-list {
+            list-style: none;
+            padding: 0;
+            margin-top: 10px;
+            max-height: 150px;
+            overflow-y: auto;
+        }
+
+        .solution-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .highlight {
+            color: var(--primary);
+            font-weight: bold;
+        }
+
+        .slider-markers {
+            position: relative;
+            width: 100%;
+            height: 20px;
+            margin-top: 5px;
+        }
+
+        .marker {
+            position: absolute;
+            top: 0;
+            transform: translateX(-50%);
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            white-space: nowrap;
+        }
+
+        .marker::before {
+            content: '';
+            position: absolute;
+            top: -8px;
+            left: 50%;
+            width: 1px;
+            height: 6px;
+            background: var(--border);
+        }
+    </style>
+</head>
+
+<body>
+    <div id="sidebar">
+        <a href="index.html"
+            style="display: inline-block; margin-bottom: 20px; color: var(--accent-blue); text-decoration: none; font-weight: 600;">&larr;
+            Back to CoV Home</a>
+        <h1>Dido's Problem: \[\frac{\theta}{\sin(\theta)} = c\]</h1>
+
+        <p>This equation arises in <strong>Dido's Problem</strong>, which seeks the curve of fixed length \(\ell\)
+            between two points that encloses the maximum area. The optimal curve is a circular arc.</p>
+        <p>Let the two points be separated by a distance \(2a\). If the circular arc has radius \(R\) and subtends an
+            angle \(2\theta\) at its center, its arc length is \(\ell = 2R\theta\) and the chord length is \(2a =
+            2R\sin(\theta)\).
+            Taking the ratio gives \(\frac{\ell}{2a} = \frac{\theta}{\sin(\theta)} = c\).</p>
+
+
+
+        <div class="control-group">
+            <label>
+                <span>Ratio \(c = \ell / 2a\)</span>
+                <span id="c-value-display" style="color: var(--primary); font-size: 1.2rem;">3.00</span>
+            </label>
+            <input type="range" id="c-slider" min="0" max="3" step="any" value="1.50" list="snap-points">
+            <datalist id="snap-points">
+                <option value="1.0"></option>
+                <option value="1.5708"></option>
+            </datalist>
+            <div class="slider-markers">
+                <span class="marker" style="left: 0%;">0</span>
+                <span class="marker" style="left: 33.3%;">1.0</span>
+                <span class="marker" style="left: 52.36%;">π/2</span>
+                <span class="marker" style="left: 100%;">3.0</span>
+            </div>
+
+            <div style="margin-top: 15px;">
+                <label style="margin-bottom: 5px;">Roots in View \([-5\pi, 5\pi]\):</label>
+                <div class="stat-box" id="num-solutions">0</div>
+            </div>
+
+            <ul class="solution-list" id="solution-list">
+                <!-- Solutions injected via JS -->
+            </ul>
+        </div>
+
+        <h3>Mathematical Properties</h3>
+        <ul style="padding-left: 20px;">
+            <li>The function \(f(\theta) = \frac{\theta}{\sin(\theta)}\) is <strong>even</strong>: \(f(-\theta) =
+                f(\theta)\).</li>
+            <li>We have \(\lim_{\theta \to 0} \frac{\theta}{\sin(\theta)} = 1\), corresponding to a
+                straight line (\(\ell =
+                2a\)).</li>
+            <li>Vertical asymptotes occur at all \(\theta = n\pi\) for non-zero integers \(n\).</li>
+            <li>In each interval \((n\pi, (n+1)\pi)\), there is exactly one local extremum point at the non-zero root of
+                \(\tan(\theta) = \theta\).</li>
+        </ul>
+
+        <h3>Physical Interpretation</h3>
+        <div style="font-size: 0.95rem; color: var(--text-muted); margin-bottom: 20px;">
+            <p>For Dido's problem, only the principal root \(\theta \in (0, \pi)\) is geometrically meaningful for a
+                simple
+                non-self-intersecting arc bounding an area against a straight line.</p>
+        </div>
+    </div>
+
+    <div id="plot-container">
+        <div id="plotly-div"></div>
+        <div id="arc-plot-div"></div>
+    </div>
+
+    <script>
+        function f(x) {
+            if (Math.abs(x) < 1e-10) return 1;
+            let s = Math.sin(x);
+            if (Math.abs(s) < 1e-10) return Math.sign(x) * Math.sign(s) * Infinity; // avoiding division by zero plotting
+            return x / s;
+        }
+
+        // Bisection method for finding root of f(x) = c
+        function findRoot(c, a, b, tol = 1e-6) {
+            let fa = f(a) - c;
+            let fb = f(b) - c;
+            if (fa * fb > 0) return null;
+            for (let i = 0; i < 60; i++) {
+                let mid = (a + b) / 2;
+                let fmid = f(mid) - c;
+                if (Math.abs(fmid) < tol) return mid;
+                if (fa * fmid < 0) {
+                    b = mid; fb = fmid;
+                } else {
+                    a = mid; fa = fmid;
+                }
+            }
+            return (a + b) / 2;
+        }
+
+        const PI = Math.PI;
+
+        function getSolutions(c) {
+            let roots = [];
+            const eps = 1e-4;
+
+            // Extrema points where x = tan(x) for positive intervals [n*PI, (n+1)*PI]
+            const extremaPos = [
+                { n: 0, x: 0, val: 1 }, // interval (-PI, PI), extremum at 0 limit
+                { n: 1, x: 4.493409, val: -4.603338 }, // (PI, 2PI)
+                { n: 2, x: 7.725251, val: 7.822515 }, // (2PI, 3PI)
+                { n: 3, x: 10.904121, val: -10.949944 }, // (3PI, 4PI)
+                { n: 4, x: 14.066193, val: 14.101725 }, // (4PI, 5PI)
+                { n: 5, x: 17.220755, val: -17.249767 } // (5PI, 6PI)
+            ];
+
+            // Interval (-PI, 0) and (0, PI)
+            if (c > 1) {
+                let r1 = findRoot(c, 0.001, PI - 0.001);
+                if (r1) { roots.push(r1); roots.push(-r1); } // Even function so roots are symmetric
+            }
+
+            for (let i = 1; i <= 4; i++) {
+                let ext = extremaPos[i];
+                let isPeak = (i % 2 !== 0); // Negative arc when n is odd
+
+                if (isPeak) {
+                    if (c < ext.val) {
+                        let r1 = findRoot(c, i * PI + 0.001, ext.x);
+                        let r2 = findRoot(c, ext.x, (i + 1) * PI - 0.001);
+                        if (r1) { roots.push(r1); roots.push(-r1); }
+                        if (r2) { roots.push(r2); roots.push(-r2); }
+                    } else if (Math.abs(c - ext.val) <= eps) {
+                        roots.push(ext.x); roots.push(-ext.x);
+                    }
+                } else {
+                    if (c > ext.val) {
+                        let r1 = findRoot(c, i * PI + 0.001, ext.x);
+                        let r2 = findRoot(c, ext.x, (i + 1) * PI - 0.001);
+                        if (r1) { roots.push(r1); roots.push(-r1); }
+                        if (r2) { roots.push(r2); roots.push(-r2); }
+                    } else if (Math.abs(c - ext.val) <= eps) {
+                        roots.push(ext.x); roots.push(-ext.x);
+                    }
+                }
+            }
+
+            roots.sort((a, b) => a - b);
+            return roots;
+        }
+
+        const slider = document.getElementById('c-slider');
+        const cValDisplay = document.getElementById('c-value-display');
+        const numSolDisplay = document.getElementById('num-solutions');
+        const solList = document.getElementById('solution-list');
+
+        const traces = [];
+        const colors = ['#60a5fa', '#a855f7', '#4ade80', '#eebd22', '#ff5555'];
+
+        for (let n = -5; n < 5; n++) {
+            let xArr = [];
+            let yArr = [];
+            let start = n * PI + 0.05;
+            let end = (n + 1) * PI - 0.05;
+            for (let x = start; x <= end; x += 0.05) {
+                let yval = f(x);
+                if (Math.abs(yval) < 25) {
+                    xArr.push(x);
+                    yArr.push(yval);
+                } else {
+                    xArr.push(null);
+                    yArr.push(null);
+                }
+            }
+            traces.push({
+                x: xArr, y: yArr,
+                mode: 'lines',
+                line: { color: colors[Math.abs(n) % colors.length], width: 3 },
+                name: `Interval ${n}π to ${n + 1}π`,
+                showlegend: false,
+                hovertemplate: '\u03B8: %{x:.3f}<br>y: %{y:.3f}<extra></extra>'
+            });
+        }
+
+        // Trace for c line (index = 10, because intervals are -5, -4, -3, -2, -1, 0, 1, 2, 3, 4 -> 10 intervals)
+        const traceLine = {
+            x: [-5.5 * PI, 5.5 * PI], y: [3, 3],
+            mode: 'lines',
+            line: { color: '#eebb22', width: 2, dash: 'dash' },
+            name: 'y = c',
+            hoverinfo: 'none'
+        };
+        traces.push(traceLine);
+
+        // Trace for roots (index = 11)
+        const traceRoots = {
+            x: [], y: [],
+            mode: 'markers',
+            marker: { color: '#ffffff', size: 9, symbol: 'circle', line: { color: '#ff5555', width: 3 } },
+            name: 'Solutions',
+            hovertemplate: 'Root \u03B8: %{x:.4f}<extra></extra>'
+        };
+        traces.push(traceRoots);
+
+        const layout = {
+            paper_bgcolor: '#0f1115',
+            plot_bgcolor: '#0f1115',
+            margin: { t: 40, r: 40, l: 40, b: 40 },
+            xaxis: {
+                title: '\u03B8',
+                color: '#94a3b8',
+                gridcolor: '#1e222a',
+                zerolinecolor: '#444c56',
+                range: [-5.5 * PI, 5.5 * PI],
+                tickmode: 'array',
+                tickvals: [-5 * PI, -4 * PI, -3 * PI, -2 * PI, -PI, 0, PI, 2 * PI, 3 * PI, 4 * PI, 5 * PI],
+                ticktext: ['-5π', '-4π', '-3π', '-2π', '-π', '0', 'π', '2π', '3π', '4π', '5π']
+            },
+            yaxis: {
+                title: 'y = \u03B8 / sin(\u03B8)',
+                color: '#94a3b8',
+                gridcolor: '#1e222a',
+                zerolinecolor: '#444c56',
+                range: [0, 20]
+            },
+            showlegend: false,
+            font: { family: 'Inter, sans-serif' },
+            title: {
+                text: "Roots: \u03B8 / sin(\u03B8) = c",
+                font: { color: '#e2e8f0', size: 16 }
+            }
+        };
+
+        // Initialize Plotly for Function Plot
+        Plotly.newPlot('plotly-div', traces, layout, { responsive: true });
+
+        // Initialize Plotly for Arc Plot
+        const a_val = 1.0; // half-distance
+        const chordTrace = {
+            x: [-a_val, a_val], y: [0, 0],
+            mode: 'lines+markers',
+            line: { color: '#94a3b8', width: 4 },
+            marker: { size: 10, color: '#ffcc33' },
+            name: 'Chord (2a)',
+            hoverinfo: 'none'
+        };
+
+        const arcTrace = {
+            x: [], y: [],
+            mode: 'lines',
+            line: { color: '#eebb22', width: 5 },
+            name: 'Circular Arc (\u2113)',
+            fill: 'toself',
+            fillcolor: 'rgba(238, 187, 34, 0.1)'
+        };
+
+        const arcLayout = {
+            paper_bgcolor: '#0f1115',
+            plot_bgcolor: '#0f1115',
+            margin: { t: 40, r: 40, l: 40, b: 60 },
+            xaxis: {
+                title: 'x',
+                color: '#94a3b8',
+                gridcolor: '#1e222a',
+                zerolinecolor: '#444c56',
+                range: [-2, 2],
+                scaleanchor: 'y',
+                scaleratio: 1
+            },
+            yaxis: {
+                title: 'y',
+                color: '#94a3b8',
+                gridcolor: '#1e222a',
+                zerolinecolor: '#444c56',
+                range: [-0.5, 2.5]
+            },
+            showlegend: false,
+            font: { family: 'Inter, sans-serif' },
+            title: {
+                text: "Dido's Problem",
+                font: { color: '#e2e8f0', size: 16 }
+            }
+        };
+
+        Plotly.newPlot('arc-plot-div', [chordTrace, arcTrace], arcLayout, { responsive: true });
+
+        function updatePlot() {
+            const rawVal = slider.value;
+            const cRaw = parseFloat(rawVal);
+
+            // Critical values for snapping
+            const sticky = [1.0, Math.PI / 2];
+            let c = cRaw;
+            let isSticky = false;
+            for (let s of sticky) {
+                if (Math.abs(cRaw - s) < 0.051) {
+                    c = s;
+                    isSticky = true;
+                    break;
+                }
+            }
+
+            cValDisplay.textContent = isSticky ? c.toFixed(6) : c.toFixed(2);
+            if (isSticky) {
+                slider.value = c;
+            }
+
+            const roots = getSolutions(c);
+            numSolDisplay.textContent = roots.length + ' (shown)';
+            numSolDisplay.style.color = roots.length > 0 ? "var(--accent-green)" : "var(--accent-red)";
+
+            solList.innerHTML = '';
+
+            // Find the principal root theta in [0, PI)
+            let principalTheta = null;
+            if (c >= 1) {
+                if (Math.abs(c - 1) < 1e-4) {
+                    principalTheta = 0;
+                } else {
+                    // The first positive root in (0, PI)
+                    principalTheta = findRoot(c, 0.001, PI - 0.001);
+                }
+            }
+
+            roots.forEach((rt, idx) => {
+                const li = document.createElement('li');
+                li.className = 'solution-item';
+                const isPrincipal = principalTheta !== null && Math.abs(rt - principalTheta) < 1e-4;
+                const isUnique = isSticky && Math.abs(c - 1.0) < 1e-4;
+
+                let label = isPrincipal ? 'Principal Root \u03B8*:' : `Root ${idx + 1}:`;
+                if (isUnique) label = 'Unique Solution (Straight Line):';
+
+                const style = isPrincipal || isUnique ? 'color: var(--primary); font-weight: bold;' : 'color: var(--accent-red);';
+                li.innerHTML = `<span>${label}</span> <span style="${style} font-family: monospace;">\u03B8 \u2248 ${rt.toFixed(4)}</span>`;
+                solList.appendChild(li);
+            });
+
+            if (roots.length === 0) {
+                const li = document.createElement('li');
+                li.className = 'solution-item';
+                li.innerHTML = `<span style="color: var(--text-muted); font-style: italic;">No roots in view range.</span>`;
+                solList.appendChild(li);
+            }
+
+            // Update Function Plot
+            const updateRoot = {
+                x: [roots],
+                y: [roots.map(() => c)]
+            };
+            const updateLine = {
+                y: [[c, c]]
+            };
+
+            // Highlight principal root specifically if it exists
+            const principalMarkerX = principalTheta !== null ? [principalTheta] : [];
+            const principalMarkerY = principalTheta !== null ? [c] : [];
+
+            // Add a dedicated trace for the principal root highlight
+            const tracePrincipal = {
+                x: principalMarkerX,
+                y: principalMarkerY,
+                mode: 'markers',
+                marker: { color: '#eebb22', size: 14, symbol: 'star', line: { color: 'white', width: 2 } },
+                name: 'Principal Solution'
+            };
+
+            // We use Plotly.react to ensure the "star" marker for principal solution is updated/added correctly
+            const updatedTraces = [...traces];
+            updatedTraces[10].y = [c, c]; // dash line
+            updatedTraces[11].x = roots;  // all roots
+            updatedTraces[11].y = roots.map(() => c);
+
+            // Add or update the principal marker trace
+            if (principalTheta !== null) {
+                updatedTraces.push(tracePrincipal);
+            }
+
+            Plotly.react('plotly-div', updatedTraces, layout, { responsive: true });
+
+            // Update Arc Plot
+            if (principalTheta !== null) {
+                const theta = principalTheta;
+                const a = a_val;
+                let arcX = [], arcY = [];
+
+                if (theta < 1e-4) {
+                    // Straight line case (c = 1.0)
+                    arcX = [-a, a];
+                    arcY = [0, 0];
+                } else {
+                    const R = a / Math.sin(theta);
+                    const yc = -a * (Math.cos(theta) / Math.sin(theta));
+                    const steps = 100;
+                    const startT = Math.PI / 2 - theta;
+                    const endT = Math.PI / 2 + theta;
+
+                    for (let i = 0; i <= steps; i++) {
+                        const t = startT + (endT - startT) * (i / steps);
+                        arcX.push(R * Math.cos(t));
+                        arcY.push(yc + R * Math.sin(t));
+                    }
+                }
+
+                // For the fill to chord, we also need to close the path
+                const fillX = [...arcX, a, -a, arcX[0]];
+                const fillY = [...arcY, 0, 0, arcY[0]];
+
+                // Atomic update using Plotly.react for better performance
+                const h = (theta < 1e-4) ? 0 : (-a * (Math.cos(theta) / Math.sin(theta)) + a / Math.sin(theta));
+                const updatedArcLayout = {
+                    ...arcLayout,
+                    'xaxis.range': [-1.5, 1.5],
+                    'yaxis.range': [-0.2, Math.max(1.5, h + 0.2)]
+                };
+
+                Plotly.react('arc-plot-div', [
+                    { ...chordTrace, x: [-a, a], y: [0, 0] },
+                    { ...arcTrace, x: fillX, y: fillY }
+                ], updatedArcLayout);
+            } else {
+                // Reset/Hide arc if no principal root
+                Plotly.react('arc-plot-div', [chordTrace, { ...arcTrace, x: [], y: [] }], arcLayout);
+            }
+        }
+
+        slider.addEventListener('input', () => {
+            let c = parseFloat(slider.value);
+
+            // Sticky points
+            const sticky = [1.0, Math.PI / 2];
+            const tolerance = 0.05;
+            for (let s of sticky) {
+                if (Math.abs(c - s) < tolerance) {
+                    c = s;
+                    slider.value = s.toFixed(2);
+                    break;
+                }
+            }
+
+            updatePlot();
+        });
+
+        // Initialize Plot
+        updatePlot();
+    </script>
+</body>
+
+</html>
