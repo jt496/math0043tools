@@ -1,0 +1,936 @@
+<!DOCTYPE html>
+<!--
+    Copyright (c) 2026 John Talbot
+
+    Authored by John Talbot, with substantial assistance from Anthropic's
+    Claude and Google's Gemini. See the NOTICE file for details.
+
+    Licensed under the Apache License, Version 2.0 (the "License");
+    you may not use this file except in compliance with the License.
+    You may obtain a copy of the License at
+
+            http://www.apache.org/licenses/LICENSE-2.0
+
+    Unless required by applicable law or agreed to in writing, software
+    distributed under the License is distributed on an "AS IS" BASIS,
+    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+    See the License for the specific language governing permissions and
+    limitations under the License.
+-->
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>The Direct Method</title>
+    <meta name="description"
+        content="Minimise a functional directly: represent the curve as a polyline, descend the discretised functional, and watch the Euler-Lagrange residual flatten to zero." />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js" async></script>
+    <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+    <style>
+        :root {
+            color-scheme: dark;
+            --primary: #eebb22;
+            --primary-hover: #ffcc33;
+            --bg-dark: #0f1115;
+            --panel-bg: rgba(20, 24, 30, 0.95);
+            --text-main: #e2e8f0;
+            --text-muted: #94a3b8;
+            --accent-red: #ff5555;
+            --accent-green: #4ade80;
+            --accent-blue: #60a5fa;
+            --accent-purple: #a855f7;
+            --border: rgba(255, 255, 255, 0.1);
+        }
+
+        body {
+            margin: 0;
+            background-color: var(--bg-dark);
+            color: var(--text-main);
+            font-family: 'Inter', sans-serif;
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        #sidebar, #controls {
+            flex-shrink: 0;
+            background: var(--panel-bg);
+            z-index: 10;
+            overflow-y: auto;
+        }
+
+        #sidebar {
+            width: 400px;
+            padding: 30px;
+            box-shadow: 4px 0 20px rgba(0, 0, 0, 0.6);
+            border-right: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        /* The controls live beside the plots, so the readouts and the verdict
+           sit next to the curves they are describing. */
+        #controls {
+            width: 330px;
+            padding: 24px 22px;
+            box-shadow: -4px 0 20px rgba(0, 0, 0, 0.6);
+            border-left: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        #controls .control-group:first-child { margin-top: 0; }
+
+        #sidebar::-webkit-scrollbar, #controls::-webkit-scrollbar { width: 8px; }
+        #sidebar::-webkit-scrollbar-thumb, #controls::-webkit-scrollbar-thumb {
+            background-color: rgba(255, 255, 255, 0.2);
+            border-radius: 4px;
+        }
+
+        #plot-container {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            background-color: var(--bg-dark);
+            height: 100vh;
+            min-width: 0;
+        }
+
+        #curve-plot, #resid-plot { flex: 1; width: 100%; min-height: 0; }
+        #curve-plot { border-bottom: 1px solid rgba(255, 255, 255, 0.05); }
+
+        h1 {
+            font-size: 2rem;
+            font-weight: 800;
+            color: var(--primary);
+            margin: 0 0 20px 0;
+            letter-spacing: -0.5px;
+        }
+
+        h3 {
+            font-size: 1.15rem;
+            color: var(--text-main);
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 8px;
+            margin-top: 30px;
+        }
+
+        p, li {
+            font-size: 1.02rem;
+            line-height: 1.6;
+            color: var(--text-main);
+            margin-bottom: 14px;
+        }
+
+        .control-group {
+            margin-top: 22px;
+            background: rgba(0, 0, 0, 0.3);
+            padding: 20px;
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        .control-group label {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+            color: var(--text-muted);
+            font-weight: 600;
+            font-size: 1rem;
+            align-items: center;
+        }
+
+        select {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 18px;
+            /* Opaque, not rgba(): the popup list composites against the
+               browser's own background, not the panel behind it. */
+            background: #171b22;
+            color: var(--text-main);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            font-family: inherit;
+            font-size: 0.98rem;
+            cursor: pointer;
+        }
+
+        select option {
+            background: #171b22;
+            color: var(--text-main);
+        }
+
+        select option:checked {
+            background: #2a313d;
+        }
+
+        select:focus { outline: 2px solid var(--primary); }
+        select:last-child { margin-bottom: 0; }
+
+        input[type=range] {
+            width: 100%;
+            accent-color: var(--primary);
+            height: 8px;
+            border-radius: 4px;
+            outline: none;
+            margin-bottom: 6px;
+            cursor: pointer;
+        }
+
+        .readout {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            padding: 9px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+            font-size: 1rem;
+        }
+
+        .readout:last-child { border-bottom: none; }
+        .readout .k { color: var(--text-muted); }
+        .readout .v {
+            font-family: 'Courier New', monospace;
+            font-weight: bold;
+            font-size: 1.1rem;
+            color: var(--text-main);
+        }
+
+        .btn {
+            flex: 1;
+            padding: 10px 6px;
+            background: rgba(255, 255, 255, 0.06);
+            color: var(--text-main);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            font-family: inherit;
+            font-size: 0.98rem;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .btn:hover { background: rgba(255, 255, 255, 0.12); }
+
+        .btn:disabled {
+            opacity: 0.45;
+            cursor: not-allowed;
+        }
+
+        .btn:disabled:hover { background: rgba(255, 255, 255, 0.06); }
+        .btn.go:disabled:hover { background: var(--primary); }
+
+        .btn.go {
+            background: var(--primary);
+            border-color: var(--primary);
+            color: #0f1115;
+        }
+
+        .btn.go:hover { background: var(--primary-hover); }
+
+        .verdict {
+            margin-top: 16px;
+            padding: 14px;
+            border-radius: 8px;
+            font-size: 1rem;
+            line-height: 1.5;
+            border-left: 4px solid var(--text-muted);
+            background: rgba(255, 255, 255, 0.04);
+        }
+
+        .verdict.good { border-left-color: var(--accent-green); background: rgba(74, 222, 128, 0.08); }
+        .verdict.bad { border-left-color: var(--accent-red); background: rgba(255, 85, 85, 0.08); }
+        .verdict.warn { border-left-color: var(--primary); background: rgba(238, 187, 34, 0.08); }
+        .verdict strong { color: var(--text-main); }
+
+        .back-link {
+            display: inline-block;
+            margin-bottom: 20px;
+            color: var(--accent-blue);
+            text-decoration: none;
+            font-weight: 600;
+        }
+
+        .back-link:hover { text-decoration: underline; }
+
+        .note {
+            font-size: 0.92rem;
+            color: var(--text-muted);
+            line-height: 1.55;
+        }
+
+        .eq {
+            background: rgba(0, 0, 0, 0.35);
+            border-radius: 8px;
+            padding: 14px;
+            margin: 14px 0;
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            /* A wide equation scrolls sideways. This also makes the box a
+               scrolling container, which is why the margins below are zeroed:
+               a child's block margins count towards scrollHeight here, and the
+               box would grow a spurious vertical scrollbar (or, if clipped,
+               cut the taller displays off top and bottom). */
+            overflow-x: auto;
+        }
+
+        /* Space comes from the box's padding instead of MathJax's own margins. */
+        .eq mjx-container[display] { margin: 0 !important; }
+
+        /* Below three-column width, drop the prose under the plots but keep the
+           controls next to them for as long as there is room. */
+        @media (max-width: 1250px) {
+            body { flex-wrap: wrap; height: auto; overflow: auto; }
+            #plot-container { height: 88vh; order: 1; flex: 1 1 460px; }
+            #controls { order: 2; height: 88vh; }
+            #sidebar {
+                order: 3; width: auto; flex: 1 1 100%; height: auto;
+                border-right: none; border-top: 1px solid rgba(255, 255, 255, 0.05);
+                box-shadow: none;
+            }
+        }
+
+        @media (max-width: 780px) {
+            body { flex-direction: column; }
+            #plot-container { height: 80vh; }
+            #controls { width: auto; height: auto; border-left: none; box-shadow: none; }
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Left: the derivation. Middle: the polyline and its Euler-Lagrange
+         residual. Right: everything you touch. -->
+    <div id="sidebar">
+        <a href="../index.html" class="back-link">&larr; Back to CoV Home</a>
+        <h1>Gradient Descent</h1>
+
+        <p>Elsewhere in this course we find a minimiser <em>indirectly</em>: assume one exists,
+            derive the Euler&ndash;Lagrange equation, and solve that ODE. The <strong>direct method</strong>
+            never forms the ODE. It treats \(I[y]\) as a function to be minimised, and minimises it the
+            way you would minimise any function of many variables: start from a guess, work out which
+            way each variable must move to make \(I\) smaller, move them all a little that way, and
+            repeat.</p>
+
+        <p>Repeating that loop until nothing moves any more is <strong>gradient descent</strong>, and
+            it is what the <em>Descend</em> button does. Nothing here solves for the answer; the curve
+            is found by successive improvement, one small correction at a time.</p>
+
+        <h3>Turning \(I[y]\) into an ordinary function</h3>
+        <p>Replace the curve by an \(N\)-node polyline on \(x_k=a+kh\). Pin \(y_0\) and \(y_N\) at the
+            boundary values; the interior heights \(y_1,\dots,y_{N-1}\) are just \(N-1\) real numbers.</p>
+
+        <p>A polyline is a curve like any other, so \(I\) has a value on it. To estimate this we split the integral into pieces, one per
+            segment \([x_k,x_{k+1}]\). Over segment \([x_k,x_{k+1}]\) the polyline is a straight line, so its slope there is exactly
+            \(p_k=(y_{k+1}-y_k)/h\) at every point of the segment, and its height runs from \(y_k\) to
+            \(y_{k+1}\). The integral is the only thing left, and in general it cannot be
+            done exactly, so we estimate it the simplest way there is: the width \(h\) times the
+            integrand measured halfway along.</p>
+
+        <div class="eq">
+            \[ \int_{x_k}^{x_{k+1}}\! F(x,y,y')\,dx \;\approx\; F\big(\bar x_k,\,\bar y_k,\, p_k\big)\,h \]
+        </div>
+
+        <p class="note">That is the <em>midpoint rule</em>, with \(\bar x_k = x_k+\tfrac h2\) the middle
+            of the segment and \(\bar y_k = \tfrac12(y_k+y_{k+1})\) the polyline's height there &mdash;
+            which is the average of the two endpoint heights because the segment is straight.</p>
+
+        <p>Adding up all \(N\) segments gives a number attached to the \(N-1\) heights:</p>
+
+        <div class="eq">
+            \[ I_N(y_1,\dots,y_{N-1}) \;=\; \sum_{k=0}^{N-1} F\big(\bar x_k,\; \bar y_k,\; p_k\big)\, h. \]
+        </div>
+
+        <p>That is an ordinary function \(\mathbb{R}^{N-1}\to\mathbb{R}\): give it \(N-1\) numbers
+            and it returns one. Minimising it needs no calculus of variations at all &mdash; only its
+            partial derivatives.</p>
+
+        <h3>The step the page takes</h3>
+        <p>One press of <em>Step</em> moves every interior node once:</p>
+
+        <div class="eq">
+            \[ y_j \;\longleftarrow\; y_j \,-\, t\,\frac{\partial I_N}{\partial y_j},
+               \qquad j=1,\dots,N-1. \]
+        </div>
+
+        <p>Each node moves <em>against</em> its own partial derivative, which is the direction that
+            makes \(I_N\) smaller. The step size \(t\) is not fixed: it is halved until \(I_N\)
+            really does decrease, so the curve can never overshoot and jump uphill. <em>Descend</em>
+            just repeats this step over and over until the derivatives are zero; the
+            <em>Steps per redraw</em> slider sets how many it gets through between refreshes of the
+            plots, so turning it up makes the curve settle sooner in real time without changing
+            anything about the method.</p>
+
+        <h3>Where Euler&ndash;Lagrange comes from</h3>
+        <p>Here is the point of the page. The height \(y_j\) appears in exactly two terms of that sum:
+            segment \(j-1\), where it is the right-hand node, and segment \(j\), where it is the left-hand
+            one. Differentiating just those two,</p>
+
+        <div class="eq">
+            \[ \frac{\partial I_N}{\partial y_j} = \frac{h}{2}\Big(F_y^{(j-1)}\!+F_y^{(j)}\Big)
+               - \Big(F_{y'}^{(j)}\!-F_{y'}^{(j-1)}\Big), \]
+        </div>
+
+        <p>and dividing by \(h\) turns the second bracket into a difference quotient:</p>
+
+        <div class="eq">
+            \[ \frac{1}{h}\frac{\partial I_N}{\partial y_j}
+               = F_y - \frac{d}{dx}\big(F_{y'}\big) + O(h). \]
+        </div>
+
+        <p><strong>The discrete gradient <em>is</em> the Euler&ndash;Lagrange expression.</strong>
+            Setting \(\nabla I_N = 0\) &mdash; the ordinary first-derivative test &mdash; becomes the
+            Euler&ndash;Lagrange equation as \(N\to\infty\). It was never pulled out of a hat.</p>
+
+        <p class="note">That is what the lower plot shows: the residual at node \(j\) is exactly
+            \(h^{-1}\partial I_N/\partial y_j\) &mdash; the same derivative the step above uses. When
+            every one of them is zero no node has any reason to move, the polyline stops changing, and
+            the Euler&ndash;Lagrange equation is satisfied. Watch the plot flatten onto zero.</p>
+
+        <h3>Why \(I_N\) does not equal \(I\)</h3>
+        <p class="note">Even once the descent has converged, \(I_N\) differs from \(I\) in the fourth
+            decimal or so, and can land on either side of it. That is not a failed minimisation: a
+            polyline with \(N\) nodes cannot be the exact curve, so \(I_N\to I\) only as
+            \(N\to\infty\). Drag \(N\) upwards and watch the difference shrink.</p>
+
+        <h3>Relation to the stationarity page</h3>
+        <p class="note">The <a href="../euler_lagrange/index.html" style="color: var(--accent-blue);">Euler&ndash;Lagrange
+            explorer</a> plots \(I(\varepsilon)\) along <em>one</em> chosen variation \(\eta\) &mdash; that is
+            the directional derivative \(\nabla I_N\cdot\eta\). Here every node moves at once, along
+            \(-\nabla I_N\), which is the single direction in which \(I_N\) falls fastest. Same object:
+            that page tests one direction you choose, this one finds the best direction there is.</p>
+
+        <h3>This problem</h3>
+        <p class="note" id="problem-note"></p>
+    </div>
+
+    <div id="plot-container">
+        <div id="curve-plot"></div>
+        <div id="resid-plot"></div>
+    </div>
+
+    <div id="controls">
+        <div class="control-group">
+            <label for="problem-select"><span>Functional \(I[y]\)</span></label>
+            <select id="problem-select"></select>
+
+            <label for="start-select"><span>Starting guess</span></label>
+            <select id="start-select">
+                <option value="line">Straight line between the endpoints</option>
+                <option value="bump">Straight line + a big bump</option>
+                <option value="random">Random wiggle</option>
+            </select>
+        </div>
+
+        <div class="control-group">
+            <label for="n-slider">
+                <span>Nodes \(N\)</span>
+                <span id="n-display" style="color: var(--primary); font-size: 1.2rem;">40</span>
+            </label>
+            <input type="range" id="n-slider" min="4" max="80" step="1" value="40">
+
+            <label for="speed-slider" style="margin-top: 14px;" title="How many descent steps to take between redraws of the plots">
+                <span>Steps per redraw</span>
+                <span id="speed-display" style="color: var(--primary); font-size: 1.2rem;">15</span>
+            </label>
+            <input type="range" id="speed-slider" min="1" max="1000" step="1" value="15">
+
+            <div style="display: flex; gap: 8px; margin-top: 16px;">
+                <button id="btn-run" class="btn go" title="Repeat the step above until the derivatives are zero">Descend</button>
+                <button id="btn-step" class="btn" title="Take one descent step: move every interior node once">Step</button>
+                <button id="btn-reset" class="btn" title="Throw the curve away and start again from the chosen guess">Reset</button>
+            </div>
+        </div>
+
+        <div class="control-group">
+            <label><span>Where the descent has got to</span></label>
+            <div class="readout"><span class="k">\(I_N\) &mdash; polyline found</span>
+                <span class="v" id="out-in">&mdash;</span></div>
+            <div class="readout"><span class="k">\(I\) &mdash; exact minimiser</span>
+                <span class="v" id="out-iexact">&mdash;</span></div>
+            <div class="readout"><span class="k">difference \(I_N-I\)</span>
+                <span class="v" id="out-gap">&mdash;</span></div>
+            <div class="readout"><span class="k">\(\max_j|h^{-1}\partial I_N/\partial y_j|\)</span>
+                <span class="v" id="out-resid">&mdash;</span></div>
+            <div class="readout"><span class="k">steps taken</span>
+                <span class="v" id="out-iter">0</span></div>
+            <div id="verdict" class="verdict">Press <strong>Descend</strong> to start improving the
+                curve, or <strong>Step</strong> to move every node once.</div>
+        </div>
+    </div>
+
+    <script>
+        'use strict';
+
+        const $ = id => document.getElementById(id);
+
+        // ── Small numerics ───────────────────────────────────────────────────
+        function simpson(g, a, b, n) {
+            n = n || 4000;
+            const h = (b - a) / n;
+            let s = g(a) + g(b);
+            for (let i = 1; i < n; i++) s += g(a + i * h) * (i % 2 ? 4 : 2);
+            return s * h / 3;
+        }
+        // f is monotone on [lo,hi] with a sign change; 200 halvings is exact to rounding.
+        function bisect(f, lo, hi) {
+            for (let i = 0; i < 200; i++) {
+                const m = 0.5 * (lo + hi);
+                if (f(lo) * f(m) <= 0) hi = m; else lo = m;
+            }
+            return 0.5 * (lo + hi);
+        }
+
+        // ── The catenoid and the cycloid, solved once ────────────────────────
+        // Soap film y(±1)=R: y = cosh(μx)/μ with cosh(μ)/μ = R. Two roots either
+        // side of the minimum at μ₀≈1.19968; the smaller one is the minimiser.
+        const SOAP_R = 1.6;
+        const SOAP_MU = bisect(m => Math.cosh(m) / m - SOAP_R, 1e-9, 1.19968);
+
+        // Brachistochrone, posed with the DEPTH as independent variable (see the
+        // problem note): cycloid x = r(t−sin t), y = r(1−cos t). θ_f ≤ π keeps y
+        // monotone, so x really is a function of y; that needs H ≥ 2/π.
+        const BR_H = 0.8;
+        const BR_TH = bisect(t => (1 - Math.cos(t)) / (t - Math.sin(t)) - BR_H, 1e-9, Math.PI);
+        const BR_R = 1 / (BR_TH - Math.sin(BR_TH));
+        const brT = y => bisect(t => BR_R * (1 - Math.cos(t)) - y, 0, BR_TH);
+
+        // ── The problems ─────────────────────────────────────────────────────
+        // Each carries F and its two partials (exactly as on the Euler-Lagrange
+        // page), the boundary values, and the analytic minimiser to overlay.
+        const PROBLEMS = [
+            {
+                id: 'shortest',
+                label: 'Shortest path:  ∫₀¹ √(1+(y′)²) dx,  y(0)=0, y(1)=1',
+                a: 0, b: 1, ya: 0, yb: 1,
+                F:  (x, y, p) => Math.sqrt(1 + p * p),
+                Fy: () => 0,
+                Fp: (x, y, p) => p / Math.sqrt(1 + p * p),
+                speed: 20,
+                start: 'bump',
+                exact:  x => x,
+                exactP: () => 1,
+                indepName: 'x', unknownName: 'y',
+                note: 'The §1.2 problem. \\(F\\) has no explicit \\(y\\), so the Euler\u2013Lagrange equation ' +
+                      'reduces to \\(F_{y\'}=\\)const and forces \\(y\'\\) constant. Watch the residual: it is ' +
+                      'the discrete version of \\(-\\tfrac{d}{dx}F_{y\'}\\), and it vanishes exactly when the ' +
+                      'polyline has equal slopes everywhere.'
+            },
+            {
+                id: 'sinh',
+                label: '∫₀¹ (y′−y)² dx,  y(0)=0, y(1)=2',
+                a: 0, b: 1, ya: 0, yb: 2,
+                F:  (x, y, p) => (p - y) * (p - y),
+                Fy: (x, y, p) => -2 * (p - y),
+                Fp: (x, y, p) => 2 * (p - y),
+                speed: 12,
+                exact:  x => 2 * Math.sinh(x) / Math.sinh(1),
+                exactP: x => 2 * Math.cosh(x) / Math.sinh(1),
+                indepName: 'x', unknownName: 'y',
+                note: 'The exercise from §1.3, where Euler\u2013Lagrange gives \\(y\'\'=y\\) and hence ' +
+                      '\\(y=2\\sinh x/\\sinh 1\\). Start from the straight line and watch it bow downwards.'
+            },
+            {
+                id: 'logx',
+                label: '∫₁² x²(y′)² + y dx,  y(1)=y(2)=1',
+                a: 1, b: 2, ya: 1, yb: 1,
+                F:  (x, y, p) => x * x * p * p + y,
+                Fy: () => 1,
+                Fp: (x, y, p) => 2 * x * x * p,
+                speed: 25,
+                exact:  x => 0.5 * Math.log(x) + Math.LN2 / x + 1 - Math.LN2,
+                exactP: x => 1 / (2 * x) - Math.LN2 / (x * x),
+                indepName: 'x', unknownName: 'y',
+                note: 'The third §1.3 exercise, with extremal \\(y=\\tfrac12\\ln x+\\tfrac{\\ln 2}{x}+1-\\ln 2\\). ' +
+                      'Here \\(F_y=1\\ne 0\\), so the residual has a constant part fighting the ' +
+                      '\\(\\tfrac{d}{dx}F_{y\'}\\) term.'
+            },
+            {
+                id: 'soap',
+                label: 'Soap film:  ∫₋₁¹ y√(1+(y′)²) dx,  y(±1)=1.6',
+                a: -1, b: 1, ya: SOAP_R, yb: SOAP_R,
+                F:  (x, y, p) => y * Math.sqrt(1 + p * p),
+                Fy: (x, y, p) => Math.sqrt(1 + p * p),
+                Fp: (x, y, p) => y * p / Math.sqrt(1 + p * p),
+                speed: 25,
+                exact:  x => Math.cosh(SOAP_MU * x) / SOAP_MU,
+                exactP: x => Math.sinh(SOAP_MU * x),
+                indepName: 'x', unknownName: 'y',
+                note: 'Area (over \\(2\\pi\\)) of the surface of revolution, the problem behind ' +
+                      '<a href="../soap_bubbles/index.html" style="color:var(--accent-blue)">Soap Bubbles</a>. ' +
+                      'Starting from the cylinder \\(y\\equiv R\\), the film pinches inwards to the catenoid ' +
+                      '\\(y=\\cosh(\\mu x)/\\mu\\). Of the two catenoids solving \\(\\cosh\\mu/\\mu=R\\) the ' +
+                      'descent finds the shallower one \u2014 the stable minimiser \u2014 on its own.'
+            },
+            {
+                id: 'brach',
+                label: 'Brachistochrone:  ∫₀^0.8 √((1+(dx/dy)²)/y) dy,  x(0)=0, x(0.8)=1',
+                a: 0, b: BR_H, ya: 0, yb: 1,
+                F:  (t, u, p) => Math.sqrt((1 + p * p) / t),
+                Fy: () => 0,
+                Fp: (t, u, p) => p / (Math.sqrt(1 + p * p) * Math.sqrt(t)),
+                speed: 220,
+                exact:  y => BR_R * (brT(y) - Math.sin(brT(y))),
+                exactP: y => { const t = brT(y); return t < 1e-9 ? 0 : Math.sin(t) / (1 - Math.cos(t)); },
+                swapAxes: true,
+                indepName: 'depth y', unknownName: 'x (horizontal)',
+                // Quadrature would hit the singularity at y=0, but along the
+                // cycloid ds/√y = √(2r) dθ, so I = √(2r)·θ_f exactly.
+                exactI: Math.sqrt(2 * BR_R) * BR_TH,
+                // ∫_a^b √(1+p²)/√y dy = 2√(1+p²)(√b − √a), exactly. Supplying
+                // `sep` overrides the midpoint rule above; F/Fy/Fp are kept as
+                // the statement of the functional (and are what the residual
+                // plot's title refers to).
+                sep: {
+                    G:  p => Math.sqrt(1 + p * p),
+                    Gp: p => p / Math.sqrt(1 + p * p),
+                    W:  (a, b) => 2 * (Math.sqrt(b) - Math.sqrt(a))
+                },
+                note: 'The bead problem \u2014 but posed with the <em>depth</em> \\(y\\) as the independent ' +
+                      'variable and \\(x(y)\\) as the unknown. Written the usual way round, the integrand ' +
+                      '\\(\\sqrt{(1+(y\')^2)/y}\\) blows up exactly where the curve starts; swapping the ' +
+                      'roles puts that \\(1/\\sqrt{\\;}\\) on the independent variable instead, and the ' +
+                      'descent behaves. The drop is deep enough (\\(H\\ge 2/\\pi\\)) that the cycloid ' +
+                      'descends monotonically, so \\(x(y)\\) really is a function.'
+            }
+        ];
+
+        // ── Discrete functional, gradient, descent ───────────────────────────
+        // x_k = a + k h, y_0 and y_N pinned. Midpoint rule on each segment:
+        //   I_N = Σ_k F(x̄_k, (y_k+y_{k+1})/2, (y_{k+1}−y_k)/h) · h
+        /**
+         * If F splits as G(y')·w(x) — no explicit y — then along a segment the
+         * slope is constant and the only x-dependence is the weight, which some
+         * problems can integrate in closed form. Using it matters: the
+         * brachistochrone's w = x^(-1/2) is singular at the left end, and the
+         * midpoint rule loses (2−√2)√h on that one cell, an error that shrinks
+         * only like √h and swamps everything else. `sep.W(a,b)` is ∫_a^b w.
+         */
+        function energy(P, y, h) {
+            let s = 0;
+            if (P.sep) {
+                for (let k = 0; k < y.length - 1; k++) {
+                    s += P.sep.G((y[k + 1] - y[k]) / h) * P.sep.W(P.a + k * h, P.a + (k + 1) * h);
+                }
+                return s;
+            }
+            for (let k = 0; k < y.length - 1; k++) {
+                const p = (y[k + 1] - y[k]) / h;
+                s += P.F(P.a + (k + 0.5) * h, 0.5 * (y[k] + y[k + 1]), p);
+            }
+            return s * h;
+        }
+
+        /**
+         * grad[j] = ∂I_N/∂y_j. y_j sits in segments j−1 and j only, so
+         *     ∂I_N/∂y_j = (h/2)(F_y^(j−1) + F_y^(j)) − (F_{y'}^(j) − F_{y'}^(j−1)),
+         * which is h × (the Euler-Lagrange expression) up to O(h). The ends are
+         * pinned, so entries 0 and N stay zero.
+         */
+        function gradient(P, y, h, out) {
+            const N = y.length - 1;
+            const g = out || new Float64Array(N + 1);
+            g.fill(0);
+            if (P.sep) {
+                // ∂I_N/∂y_j = h⁻¹[G'(p_{j-1})W_{j-1} − G'(p_j)W_j], and since
+                // W_k ≈ w·h this is still h × (F_y − d/dx F_y′) as before.
+                for (let k = 0; k < N; k++) {
+                    const c = P.sep.Gp((y[k + 1] - y[k]) / h)
+                            * P.sep.W(P.a + k * h, P.a + (k + 1) * h) / h;
+                    g[k] -= c;
+                    g[k + 1] += c;
+                }
+                g[0] = 0; g[N] = 0;
+                return g;
+            }
+            for (let k = 0; k < N; k++) {
+                const p = (y[k + 1] - y[k]) / h;
+                const xm = P.a + (k + 0.5) * h, ym = 0.5 * (y[k] + y[k + 1]);
+                const fy = P.Fy(xm, ym, p), fp = P.Fp(xm, ym, p);
+                g[k]     += 0.5 * h * fy - fp;
+                g[k + 1] += 0.5 * h * fy + fp;
+            }
+            g[0] = 0; g[N] = 0;
+            return g;
+        }
+
+        /**
+         * One steepest-descent step with a backtracking line search: halve the
+         * step until I actually decreases (Armijo), then double the starting
+         * step for next time. Returns false once no step decreases I — i.e. we
+         * are at the bottom to within rounding.
+         */
+        function descend(P, y, h, state) {
+            const N = y.length - 1;
+            const g = gradient(P, y, h, state.g);
+            let gg = 0;
+            for (let j = 1; j < N; j++) gg += g[j] * g[j];
+            if (!(gg > 0)) return false;
+
+            const I0 = energy(P, y, h);
+            let t = state.t;
+            const trial = state.trial;
+            trial.set(y);
+            for (let tries = 0; tries < 60; tries++) {
+                for (let j = 1; j < N; j++) trial[j] = y[j] - t * g[j];
+                const I1 = energy(P, trial, h);
+                if (isFinite(I1) && I1 <= I0 - 1e-4 * t * gg) {
+                    y.set(trial);
+                    state.t = t * 2;
+                    return true;
+                }
+                t *= 0.5;
+            }
+            state.t = t;
+            return false;
+        }
+
+        // ── State ────────────────────────────────────────────────────────────
+        let problem = PROBLEMS[0];
+        let N = 40, stepsPerFrame = 15, startKind = 'line';
+        let y, h, state, iters = 0, running = false, stalled = false, converged = false, raf = null;
+        // One threshold, used both to stop the animation and to print the
+        // verdict, so the two can never disagree.
+        const CONVERGED = 1e-4;
+        // Floor for the residual plot's y-range, set from the starting guess.
+        // Without it the axis keeps shrinking to whatever is left and a residual
+        // that has fallen five orders of magnitude still fills the panel.
+        let residFloor = 1e-6;
+
+        function initialGuess(P, n, kind) {
+            const hh = (P.b - P.a) / n;
+            const arr = new Float64Array(n + 1);
+            for (let k = 0; k <= n; k++) {
+                const u = k / n;
+                arr[k] = P.ya + (P.yb - P.ya) * u;
+                if (k === 0 || k === n) continue;
+                const scale = 0.45 * (Math.abs(P.yb - P.ya) || 1) + 0.35;
+                if (kind === 'bump') arr[k] += scale * 1.6 * Math.sin(Math.PI * u);
+                else if (kind === 'random') arr[k] += scale * (Math.random() - 0.5) * 2;
+            }
+            // Problems with a 1/y or √y in F need to start strictly inside the domain.
+            if (P.id === 'soap' || P.id === 'brach') {
+                for (let k = 1; k < n; k++) arr[k] = Math.max(arr[k], 1e-3);
+            }
+            return arr;
+        }
+
+        function reset() {
+            h = (problem.b - problem.a) / N;
+            y = initialGuess(problem, N, startKind);
+            state = { t: 1e-4, g: new Float64Array(N + 1), trial: new Float64Array(N + 1) };
+            iters = 0; stalled = false;
+            const g0 = gradient(problem, y, h);
+            let r0 = 0;
+            for (let j = 1; j < N; j++) r0 = Math.max(r0, Math.abs(g0[j] / h));
+            residFloor = Math.max(1e-6, 1e-3 * r0);
+            // Some starting guesses are already the answer (the straight line
+            // for the shortest path), so decide this here rather than waiting
+            // for a step that will never be taken.
+            converged = r0 < CONVERGED;
+            draw();
+            syncRunButton();
+        }
+
+        // ── Exact minimiser, for the overlay and the I readout ───────────────
+        const exactCache = new Map();
+        function exactEnergy(P) {
+            if (!exactCache.has(P.id)) {
+                exactCache.set(P.id, P.exactI !== undefined
+                    ? P.exactI
+                    : simpson(x => P.F(x, P.exact(x), P.exactP(x)), P.a, P.b));
+            }
+            return exactCache.get(P.id);
+        }
+
+        // ── Plots ────────────────────────────────────────────────────────────
+        const BASE = {
+            paper_bgcolor: '#0f1115', plot_bgcolor: '#0f1115',
+            font: { color: '#e2e8f0', family: 'Inter, sans-serif', size: 13 },
+            margin: { t: 44, r: 24, b: 48, l: 62 },
+            xaxis: { gridcolor: 'rgba(255,255,255,0.08)', zerolinecolor: 'rgba(255,255,255,0.25)' },
+            yaxis: { gridcolor: 'rgba(255,255,255,0.08)', zerolinecolor: 'rgba(255,255,255,0.25)' },
+            legend: { bgcolor: 'rgba(0,0,0,0.35)', bordercolor: 'rgba(255,255,255,0.1)', borderwidth: 1 }
+        };
+        const CONFIG = { responsive: true, displayModeBar: false };
+        const clone = o => JSON.parse(JSON.stringify(o));
+
+        function draw() {
+            const xs = [], ex = [];
+            for (let k = 0; k <= N; k++) {
+                xs.push(problem.a + k * h);
+                ex.push(problem.exact(problem.a + k * h));
+            }
+            // A finer sample for the analytic curve, so the overlay stays smooth
+            // even when N is small.
+            const fx = [], fy = [];
+            for (let i = 0; i <= 300; i++) {
+                const xv = problem.a + (problem.b - problem.a) * i / 300;
+                fx.push(xv); fy.push(problem.exact(xv));
+            }
+
+            const sw = problem.swapAxes;
+            const curveTraces = [
+                { x: sw ? fy : fx, y: sw ? fx : fy, mode: 'lines', name: 'exact minimiser',
+                  line: { color: '#94a3b8', width: 2, dash: 'dash' } },
+                { x: sw ? Array.from(y) : xs, y: sw ? xs : Array.from(y),
+                  mode: 'lines+markers', name: 'polyline',
+                  line: { color: '#eebb22', width: 2.5 },
+                  marker: { color: '#eebb22', size: N > 50 ? 4 : 6 } },
+                { x: sw ? [y[0], y[N]] : [xs[0], xs[N]], y: sw ? [xs[0], xs[N]] : [y[0], y[N]],
+                  mode: 'markers', name: 'pinned ends',
+                  marker: { color: '#4ade80', size: 11 } }
+            ];
+            const cl = clone(BASE);
+            cl.title = { text: 'The polyline, improving', font: { size: 15 } };
+            cl.xaxis.title = { text: sw ? problem.unknownName : problem.indepName };
+            cl.yaxis.title = { text: sw ? problem.indepName : problem.unknownName };
+            if (sw) cl.yaxis.autorange = 'reversed';   // depth increases downward
+            Plotly.react('curve-plot', curveTraces, cl, CONFIG);
+
+            // Residual R_j = h⁻¹ ∂I_N/∂y_j at the interior nodes.
+            const g = gradient(problem, y, h);
+            const rx = [], rv = [];
+            let maxR = 0;
+            for (let j = 1; j < N; j++) {
+                rx.push(problem.a + j * h);
+                const r = g[j] / h;
+                rv.push(r);
+                maxR = Math.max(maxR, Math.abs(r));
+            }
+            const rl = clone(BASE);
+            rl.title = { text: 'Euler–Lagrange residual  h⁻¹ ∂I_N/∂y_j  =  F_y − d/dx(F_y′)', font: { size: 15 } };
+            rl.xaxis.title = { text: problem.indepName };
+            rl.yaxis.title = { text: 'residual' };
+            rl.showlegend = false;
+            // Track the residual down, but stop rescaling once it is small, so a
+            // converged residual reads as flat on zero rather than being
+            // magnified back to full height.
+            const span = Math.max(maxR, residFloor) * 1.15;
+            rl.yaxis.range = [-span, span];
+            rl.yaxis.autorange = false;
+            Plotly.react('resid-plot', [
+                { x: rx, y: rv, mode: 'lines+markers', line: { color: '#a855f7', width: 2 },
+                  marker: { color: '#a855f7', size: N > 50 ? 4 : 6 } }
+            ], rl, CONFIG);
+
+            // Readouts
+            const IN = energy(problem, y, h), IE = exactEnergy(problem);
+            const gap = IN - IE;
+            $('out-in').textContent = IN.toFixed(6);
+            $('out-iexact').textContent = IE.toFixed(6);
+            $('out-gap').textContent = (gap >= 0 ? '+' : '') + gap.toExponential(2);
+            $('out-resid').textContent = maxR.toExponential(2);
+            $('out-iter').textContent = String(iters);
+
+            const v = $('verdict');
+            if (maxR < CONVERGED) {
+                v.className = 'verdict good';
+                v.innerHTML = '<strong>Converged.</strong> The residual is zero to plotting accuracy, so the ' +
+                    'polyline satisfies the discrete Euler\u2013Lagrange equation, and it sits on the analytic ' +
+                    'curve because that is what solving E\u2013L would have given you. \\(I_N\\) does not quite ' +
+                    'equal \\(I\\) because \\(N\\) is finite \u2014 increase \\(N\\) and the difference shrinks.';
+            } else if (stalled) {
+                v.className = 'verdict warn';
+                v.innerHTML = '<strong>Stopped.</strong> Even after repeated halving, no step size makes ' +
+                    '\\(I_N\\) smaller, so the descent can go no further at this arithmetic precision. ' +
+                    'The largest step that is safe to take shrinks like \\(h^2\\), so this happens sooner ' +
+                    'for large \\(N\\). Try fewer nodes.';
+            } else if (running) {
+                v.className = 'verdict';
+                v.innerHTML = 'Every node is moving against its own \\(\\partial I_N/\\partial y_j\\). ' +
+                    'The lower plot <em>is</em> those derivatives, and they are being driven to zero.';
+            } else {
+                v.className = 'verdict';
+                v.innerHTML = 'Press <strong>Descend</strong> to start improving the curve, or ' +
+                    '<strong>Step</strong> to move every node once.';
+            }
+            if (window.MathJax && MathJax.typesetPromise) {
+                MathJax.typesetPromise([v]).catch(() => {});
+            }
+        }
+
+        // ── Animation ────────────────────────────────────────────────────────
+        function maxResidual() {
+            const g = gradient(problem, y, h);
+            let m = 0;
+            for (let j = 1; j < N; j++) m = Math.max(m, Math.abs(g[j] / h));
+            return m;
+        }
+
+        function frame() {
+            if (!running) return;
+            for (let i = 0; i < stepsPerFrame; i++) {
+                if (!descend(problem, y, h, state)) { stalled = true; running = false; break; }
+                iters++;
+            }
+            // Stop of our own accord at the bottom, rather than spinning on for
+            // ever taking steps that no longer change anything.
+            if (maxResidual() < CONVERGED) { converged = true; running = false; }
+            draw();
+            syncRunButton();
+            if (running) raf = requestAnimationFrame(frame);
+        }
+
+        function syncRunButton() {
+            const b = $('btn-run');
+            b.textContent = running ? 'Pause' : 'Descend';
+            b.classList.toggle('go', !running);
+            // At the bottom there is nothing left to descend, so grey the button
+            // out rather than leaving it looking live but doing nothing.
+            b.disabled = converged || stalled;
+        }
+
+        // ── Wiring ───────────────────────────────────────────────────────────
+        PROBLEMS.forEach((p, i) => {
+            const o = document.createElement('option');
+            o.value = String(i); o.textContent = p.label;
+            $('problem-select').appendChild(o);
+        });
+
+        function loadProblem() {
+            problem = PROBLEMS[parseInt($('problem-select').value, 10)];
+            running = false; syncRunButton();
+            $('problem-note').innerHTML = problem.note;
+            stepsPerFrame = problem.speed;
+            $('speed-slider').value = String(stepsPerFrame);
+            $('speed-display').textContent = String(stepsPerFrame);
+            startKind = problem.start || 'line';
+            $('start-select').value = startKind;
+            reset();
+            if (window.MathJax && MathJax.typesetPromise) {
+                MathJax.typesetPromise([$('problem-note')]).catch(() => {});
+            }
+        }
+
+        $('problem-select').addEventListener('change', loadProblem);
+        $('start-select').addEventListener('change', () => {
+            startKind = $('start-select').value;
+            running = false; syncRunButton(); reset();
+        });
+        $('n-slider').addEventListener('input', e => {
+            N = parseInt(e.target.value, 10);
+            $('n-display').textContent = String(N);
+            running = false; syncRunButton(); reset();
+        });
+        $('speed-slider').addEventListener('input', e => {
+            stepsPerFrame = parseInt(e.target.value, 10);
+            $('speed-display').textContent = String(stepsPerFrame);
+        });
+        $('btn-run').addEventListener('click', () => {
+            if (stalled || converged) return;
+            running = !running;
+            syncRunButton();
+            if (running) raf = requestAnimationFrame(frame);
+            else if (raf) cancelAnimationFrame(raf);
+        });
+        $('btn-step').addEventListener('click', () => {
+            running = false; syncRunButton();
+            if (descend(problem, y, h, state)) iters++; else stalled = true;
+            draw();
+        });
+        $('btn-reset').addEventListener('click', () => {
+            running = false; syncRunButton(); reset();
+        });
+
+        $('problem-select').value = '0';
+        loadProblem();
+    </script>
+</body>
+
+</html>

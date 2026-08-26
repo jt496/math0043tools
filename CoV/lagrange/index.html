@@ -116,6 +116,20 @@
             font-size: 1.8rem;
         }
 
+
+        /* The dropdown's popup list is drawn by the browser against its own
+           background, not the panel behind it. Without these it took the default
+           light background while inheriting the near-white `color` above, which
+           left the options unreadable. */
+        :root { color-scheme: dark; }
+
+        select option {
+            background: rgb(20,24,32);
+            color: var(--text-main);
+        }
+
+        select option:checked { background: #2a313d; }
+
         input[type=range] {
             width: 100%;
             accent-color: var(--primary);
@@ -250,7 +264,7 @@
         <div class="control-group" style="margin-top: 15px;">
             <label style="margin-bottom: 10px;">Select Scenario</label>
             <select id="scenario-select"
-                style="width: 100%; padding: 16px; border-radius: 12px; background: rgba(0,0,0,0.5); color: var(--text-main); border: 1px solid rgba(255,255,255,0.1); font-size: 1.8rem; margin-bottom: 20px; cursor: pointer;">
+                style="width: 100%; padding: 16px; border-radius: 12px; background: rgb(20,24,32); color: var(--text-main); border: 1px solid rgba(255,255,255,0.1); font-size: 1.8rem; margin-bottom: 20px; cursor: pointer;">
                 <option value="saddle-cylinder">f(x, y) = x² - y²,&nbsp; g(x, y) = x² + y² = 1</option>
                 <option value="plane-cylinder">f(x, y) = x + y,&nbsp; g(x, y) = x² + y² = 1</option>
                 <option value="paraboloid-line">f(x, y) = x² + y²,&nbsp; g(x, y) = x + y = 1</option>

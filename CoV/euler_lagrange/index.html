@@ -141,7 +141,7 @@
             width: 100%;
             padding: 10px;
             margin-bottom: 18px;
-            background: rgba(0, 0, 0, 0.45);
+            background: #171b22;
             color: var(--text-main);
             border: 1px solid var(--border);
             border-radius: 8px;
@@ -149,6 +149,20 @@
             font-size: 0.98rem;
             cursor: pointer;
         }
+
+
+        /* The dropdown's popup list is drawn by the browser against its own
+           background, not the panel behind it. Without these it took the default
+           light background while inheriting the near-white `color` above, which
+           left the options unreadable. */
+        :root { color-scheme: dark; }
+
+        select option {
+            background: #171b22;
+            color: var(--text-main);
+        }
+
+        select option:checked { background: #2a313d; }
 
         select:focus { outline: 2px solid var(--primary); }
         select:last-child { margin-bottom: 0; }
