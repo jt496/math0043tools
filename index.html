@@ -23,7 +23,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MATH0043 | Interactive Mathematics</title>
-    <meta name="description" content="Interactive visualisations for Group Theory and the Calculus of Variations.">
+    <meta name="description" content="Interactive visualisations for the Calculus of Variations, Group Theory and Representation Theory.">
 
     <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -63,7 +63,7 @@
         }
 
         .container {
-            max-width: 900px;
+            max-width: 1200px;
             width: 100%;
             z-index: 1;
         }
@@ -96,7 +96,7 @@
 
         .grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
             gap: 30px;
             animation: fadeIn 1s ease-out 0.3s both;
         }
@@ -269,7 +269,7 @@
     <div class="container">
         <header>
             <h1>MATH0043</h1>
-            <p class="subtitle">The Calculus of Variations and Group Theory.
+            <p class="subtitle">The Calculus of Variations, Group Theory and Representation Theory.
             </p>
         </header>
 
@@ -296,7 +296,21 @@
                 <div class="card-link">Explore Groups <span class="arrow">→</span></div>
             </a>
 
-            
+            <a href="./representations/index.html" class="card">
+                <span class="card-icon" style="
+                    font-family: 'Times New Roman', serif;
+                    font-weight: 300;
+                    background: linear-gradient(135deg, #60a5fa 0%, #34d399 100%);
+                    -webkit-background-clip: text;
+                    background-clip: text;
+                    -webkit-text-fill-color: transparent;
+                    display: inline-block;
+                ">&rho;</span>
+                <h2>Representation Theory</h2>
+                <p>Finite groups acting on complex vector spaces. Matrix representations, characters, irreducibility,
+                    and a checker for character tables you have worked out by hand.</p>
+                <div class="card-link">Explore Reps <span class="arrow">→</span></div>
+            </a>
         </main>
 
         <footer>

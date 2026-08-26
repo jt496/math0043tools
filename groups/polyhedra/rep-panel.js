@@ -242,7 +242,7 @@
     // ── Rendering ─────────────────────────────────────────────────────────────
 
     // Entries are printed symbolically rather than as decimals, in the same
-    // spirit as the Representation Explorer (groups/structure/representations).
+    // spirit as the Representation Explorer (representations/explorer).
     // That page renders LaTeX through MathJax; these pages do not load MathJax
     // (and the panel re-renders on every animation frame), so the symbols here
     // are plain Unicode -- but the key idea is the same: pull out a common
@@ -510,7 +510,7 @@
             'turn through the same angle. Note that the converse can fail — in ' + groupName +
             ' two <em>different</em> classes may share an angle.</p>' +
             '<p>To decompose representations and build character tables, visit the ' +
-            '<a href="../../structure/representations/index.html">Representation Explorer &rarr;</a></p>' +
+            '<a href="../../../representations/explorer/index.html">Representation Explorer &rarr;</a></p>' +
             '</div></div>';
         document.body.appendChild(modal);
 
