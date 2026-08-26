@@ -747,18 +747,52 @@
             object-fit: contain;
         }
 
-        /* Keyboard hint (moved to top-right) */
-        .keyboard-hint {
+        /* The two corner labels share one fixed cluster in the top-right.
+           That corner is the only one the slides keep clear: top-left carries
+           each slide's .current-slide-badge and title, and the bottom edge
+           carries captions, control buttons and plots. */
+        .deck-chrome {
             position: fixed;
             top: 14px;
             right: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            z-index: 1100;
+        }
+
+        .deck-back-link {
             font-size: 0.8rem;
             color: var(--text-muted);
-            background: rgba(0, 0, 0, 0.06);
+            /* Opaque so it stays readable over whatever the slide puts behind it. */
+            background: var(--background);
             padding: 6px 10px;
             border-radius: 6px;
             border: 1px solid var(--border);
-            z-index: 1100;
+            text-decoration: none;
+            white-space: nowrap;
+            transition: color 0.12s ease, border-color 0.12s ease;
+        }
+
+        .deck-back-link:hover,
+        .deck-back-link:focus {
+            color: var(--primary);
+            border-color: var(--primary);
+            text-decoration: none;
+        }
+
+        /* Keyboard hint — positioned by .deck-chrome above */
+        .keyboard-hint {
+            white-space: nowrap;
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            /* Opaque, to match .deck-back-link: on a short window the title
+               slide's heading reaches into this corner and translucent chrome
+               over it is unreadable. */
+            background: var(--background);
+            padding: 6px 10px;
+            border-radius: 6px;
+            border: 1px solid var(--border);
         }
 
         kbd {
@@ -929,7 +963,7 @@
             #stepHint,
             .nav-bar, 
             #navToggleHandle, 
-            .keyboard-hint,
+            .deck-chrome,
             .progress-info, 
             .solver-link,
             #raceResults,
