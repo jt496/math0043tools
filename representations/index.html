@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<!--
+    Copyright (c) 2026 John Talbot
+
+    Authored by John Talbot, with substantial assistance from Anthropic's
+    Claude and Google's Gemini. See the NOTICE file for details.
+
+    Licensed under the Apache License, Version 2.0 (the "License");
+    you may not use this file except in compliance with the License.
+    You may obtain a copy of the License at
+
+            http://www.apache.org/licenses/LICENSE-2.0
+
+    Unless required by applicable law or agreed to in writing, software
+    distributed under the License is distributed on an "AS IS" BASIS,
+    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+    See the License for the specific language governing permissions and
+    limitations under the License.
+-->
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="description" content="Interactive tools for the representation theory of finite groups — matrix representations, characters, irreducibility and character tables.">
+    <title>Representation Theory</title>
+    <link rel="icon" type="image/png" href="../groups/favicon.png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Outfit', sans-serif;
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%);
+            color: #e2e8f0;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 40px 20px;
+        }
+
+        .container {
+            max-width: 1000px;
+            width: 100%;
+        }
+
+        .back-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            color: #60a5fa;
+            text-decoration: none;
+            font-size: 0.95rem;
+            font-weight: 400;
+            margin-bottom: 48px;
+            opacity: 0.8;
+            transition: opacity 0.2s ease;
+        }
+
+        .back-link:hover {
+            opacity: 1;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 60px;
+        }
+
+        h1 {
+            font-size: 3rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, #60a5fa, #a78bfa, #f472b6);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 16px;
+            animation: fadeInDown 0.8s ease-out;
+        }
+
+        .subtitle {
+            font-size: 1.2rem;
+            color: #94a3b8;
+            font-weight: 300;
+            animation: fadeInUp 0.8s ease-out 0.2s both;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(290px, 1fr));
+            gap: 24px;
+            animation: fadeIn 1s ease-out 0.4s both;
+        }
+
+        .card {
+            background: rgba(30, 41, 59, 0.6);
+            backdrop-filter: blur(10px);
+            border-radius: 16px;
+            padding: 32px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            transform: scaleX(0);
+            transform-origin: left;
+            transition: transform 0.3s ease;
+        }
+
+        .card.blue::before {
+            background: linear-gradient(90deg, #60a5fa, #818cf8);
+        }
+
+        .card.purple::before {
+            background: linear-gradient(90deg, #a78bfa, #c084fc);
+        }
+
+        .card.teal::before {
+            background: linear-gradient(90deg, #34d399, #22d3ee);
+        }
+
+        .card.amber::before {
+            background: linear-gradient(90deg, #fb923c, #fbbf24);
+        }
+
+        .card.red::before {
+            background: linear-gradient(90deg, #ef4444, #f87171);
+        }
+
+        .card.pink::before {
+            background: linear-gradient(90deg, #f472b6, #fb7185);
+        }
+
+        .card:hover {
+            transform: translateY(-8px);
+            border-color: rgba(96, 165, 250, 0.3);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+        }
+
+        .card:hover::before {
+            transform: scaleX(1);
+        }
+
+        .card a {
+            text-decoration: none;
+            color: inherit;
+            display: block;
+        }
+
+        .card-icon {
+            width: 52px;
+            height: 52px;
+            border-radius: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 20px;
+            font-size: 26px;
+        }
+
+        .card.blue .card-icon {
+            background: linear-gradient(135deg, #3b82f6, #4f46e5);
+        }
+
+        .card.purple .card-icon {
+            background: linear-gradient(135deg, #7c3aed, #6d28d9);
+        }
+
+        .card.teal .card-icon {
+            background: linear-gradient(135deg, #0d9488, #0891b2);
+        }
+
+        .card.amber .card-icon {
+            background: linear-gradient(135deg, #d97706, #b45309);
+        }
+
+        .card.red .card-icon {
+            background: linear-gradient(135deg, #b91c1c, #dc2626);
+        }
+
+        .card.pink .card-icon {
+            background: linear-gradient(135deg, #db2777, #be185d);
+        }
+
+        .card-title {
+            font-size: 1.35rem;
+            font-weight: 600;
+            color: #e2e8f0;
+            margin-bottom: 10px;
+            transition: color 0.3s ease;
+        }
+
+        .card.blue:hover .card-title {
+            color: #60a5fa;
+        }
+
+        .card.purple:hover .card-title {
+            color: #a78bfa;
+        }
+
+        .card.teal:hover .card-title {
+            color: #34d399;
+        }
+
+        .card.amber:hover .card-title {
+            color: #fbbf24;
+        }
+
+        .card.red:hover .card-title {
+            color: #f87171;
+        }
+
+        .card.pink:hover .card-title {
+            color: #f472b6;
+        }
+
+        .card-description {
+            font-size: 0.95rem;
+            color: #94a3b8;
+            line-height: 1.6;
+            margin-bottom: 16px;
+        }
+
+        .card-count {
+            font-size: 0.85rem;
+            font-weight: 600;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+            opacity: 0.6;
+        }
+
+        .card.blue .card-count {
+            color: #60a5fa;
+        }
+
+        .card.purple .card-count {
+            color: #a78bfa;
+        }
+
+        .card.teal .card-count {
+            color: #34d399;
+        }
+
+        .card.amber .card-count {
+            color: #fbbf24;
+        }
+
+        .card.red .card-count {
+            color: #f87171;
+        }
+
+        .card.pink .card-count {
+            color: #f472b6;
+        }
+
+        .arrow {
+            display: inline-block;
+            margin-left: 6px;
+            transition: transform 0.3s ease;
+        }
+
+        .card:hover .arrow {
+            transform: translateX(4px);
+        }
+
+        footer {
+            text-align: center;
+            margin-top: 60px;
+            color: #64748b;
+            font-size: 0.9rem;
+            animation: fadeIn 1s ease-out 0.6s both;
+        }
+
+        @keyframes fadeInDown {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+
+            to {
+                opacity: 1;
+            }
+        }
+
+        @media (max-width: 768px) {
+            h1 {
+                font-size: 2rem;
+            }
+
+            .subtitle {
+                font-size: 1rem;
+            }
+
+            .grid {
+                grid-template-columns: 1fr;
+            }
+
+            .card {
+                padding: 24px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <a href="../index.html" class="back-link">← MATH0043</a>
+
+        <header>
+            <h1>Representation Theory</h1>
+            <p class="subtitle">Finite groups acting on complex vector spaces</p>
+        </header>
+
+        <div class="grid">
+            <div class="card purple">
+                <a href="explorer/index.html">
+                    <div class="card-icon" aria-hidden="true">𝜌</div>
+                    <h2 class="card-title">Representation Explorer <span class="arrow">→</span></h2>
+                    <p class="card-description">Matrix representations of finite groups over ℂ. Check the defining
+                        relations, read off characters, test irreducibility and faithfulness, and decompose a reducible
+                        representation into irreducibles with an explicit change of basis.</p>
+                    <p class="card-count">17 groups</p>
+                </a>
+            </div>
+
+            <div class="card teal">
+                <a href="characters/index.html">
+                    <div class="card-icon" aria-hidden="true">𝜒</div>
+                    <h2 class="card-title">Character Explorer <span class="arrow">→</span></h2>
+                    <p class="card-description">Check a character you worked out by hand. Type a class function for
+                        ⟨χ,χ⟩ and the multiplicities n<sub>r</sub>, or a whole character table for Σd<sub>i</sub>² = |G|
+                        and the row and column orthogonality relations.</p>
+                    <p class="card-count">Homework checker</p>
+                </a>
+            </div>
+        </div>
+
+        <footer>
+            <p>Interactive Representation Theory Visualisations</p>
+        </footer>
+    </div>
+</body>
+
+</html>

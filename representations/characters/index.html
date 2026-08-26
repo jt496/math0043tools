@@ -27,7 +27,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="../homomorphisms/style.css">
+    <link rel="stylesheet" href="../../groups/structure/homomorphisms/style.css">
     <!-- MathJax for rendering math equations -->
     <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
     <style>
@@ -117,7 +117,7 @@
 <body>
     <div id="app-container">
         <header>
-            <a href="../tools.html" class="back-link">← Tools</a>
+            <a href="../index.html" class="back-link">← Representation Theory</a>
             <h1>Character Explorer</h1>
             <p class="subtitle">Check a character you have computed against the group</p>
         </header>
@@ -138,7 +138,7 @@
                 <p class="help-text" style="margin:-1rem 0 0; line-height:1.6;">
                     Looking for the representations themselves — generator matrices, decompositions,
                     change of basis? Those are in the
-                    <a href="../representations/index.html" style="color:#a78bfa; font-weight:600;">Representation Explorer</a>.
+                    <a href="../explorer/index.html" style="color:#a78bfa; font-weight:600;">Representation Explorer</a>.
                 </p>
             </div>
 
@@ -173,6 +173,7 @@
             <div id="cc-results" class="result-card full-width hidden">
                 <h3>Verdict</h3>
                 <div id="cc-results-body" style="line-height:1.8;"></div>
+            </div>
 
             <!-- Modal for Group Character Table -->
             <div id="char-table-modal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="modal-group-name">
@@ -189,8 +190,8 @@
         </main>
     </div>
 
-    <script src="../group-utils.js"></script>
-    <script src="../presentations/script.js"></script>
+    <script src="../../groups/structure/group-utils.js"></script>
+    <script src="../../groups/structure/presentations/script.js"></script>
     <script src="../rep-core.js"></script>
     <script src="script.js"></script>
 </body>
