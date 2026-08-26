@@ -9,8 +9,38 @@ generative AI tools, namely Anthropic's Claude and Google's Gemini. The
 work was directed, reviewed and edited by John Talbot, in whom copyright
 in the human-authored contributions vests.
 
-Third-party components:
+--------------------------------------------------------------------------
+THIRD-PARTY COMPONENTS
+--------------------------------------------------------------------------
 
-  Three.js — used for 3D visualisations.
+The pages in this repository load the following libraries from public CDNs
+at runtime. None of them are redistributed here; each remains under its own
+licence and copyright.
+
+three.js (r128 / 0.128.0), including OrbitControls — 3D rendering
   Copyright (c) 2010-2026 three.js authors
-  Licensed under the MIT License. See https://threejs.org/
+  MIT Licence — https://github.com/mrdoob/three.js
+
+MathJax (3.x) — mathematical typesetting
+  Copyright (c) 2017-2026 The MathJax Consortium
+  Apache Licence 2.0 — https://github.com/mathjax/MathJax
+
+KaTeX (0.16.9) — mathematical typesetting
+  Copyright (c) 2013-2020 Khan Academy and other contributors
+  MIT Licence — https://github.com/KaTeX/KaTeX
+
+Plotly.js (2.27.0) — interactive plotting
+  Copyright (c) 2016-2024 Plotly Technologies Inc.
+  MIT Licence — https://github.com/plotly/plotly.js
+
+3d-force-graph — force-directed graphs, used for Cayley graphs
+  Copyright (c) 2017 Vasco Asturiano
+  MIT Licence — https://github.com/vasturiano/3d-force-graph
+
+cube.js (1.0.0) — Rubik's Cube modelling and solving
+  Copyright (c) 2013-2017 Petri Lehtinen
+  Copyright (c) 2018 Ludovic Fernandez
+  MIT Licence — https://github.com/akheron/cubejs
+
+Web fonts (Outfit, Inter) are served by Google Fonts under the SIL Open
+Font Licence 1.1.
