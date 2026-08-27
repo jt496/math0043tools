@@ -1,0 +1,1017 @@
+<!DOCTYPE html>
+<!--
+    Copyright (c) 2026 John Talbot
+
+    Authored by John Talbot, with substantial assistance from Anthropic's
+    Claude and Google's Gemini. See the NOTICE file for details.
+
+    Licensed under the Apache License, Version 2.0 (the "License");
+    you may not use this file except in compliance with the License.
+    You may obtain a copy of the License at
+
+            http://www.apache.org/licenses/LICENSE-2.0
+
+    Unless required by applicable law or agreed to in writing, software
+    distributed under the License is distributed on an "AS IS" BASIS,
+    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+    See the License for the specific language governing permissions and
+    limitations under the License.
+-->
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Constrained Minimisation</title>
+    <meta name="description"
+        content="Minimise a functional subject to a side condition: descend the discretised functional less lambda times the constraint, and watch the multiplier be found rather than given." />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js" async></script>
+    <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+    <style>
+        :root {
+            color-scheme: dark;
+            --primary: #eebb22;
+            --primary-hover: #ffcc33;
+            --bg-dark: #0f1115;
+            --panel-bg: rgba(20, 24, 30, 0.95);
+            --text-main: #e2e8f0;
+            --text-muted: #94a3b8;
+            --accent-red: #ff5555;
+            --accent-green: #4ade80;
+            --accent-blue: #60a5fa;
+            --accent-purple: #a855f7;
+            --border: rgba(255, 255, 255, 0.1);
+        }
+
+        body {
+            margin: 0;
+            background-color: var(--bg-dark);
+            color: var(--text-main);
+            font-family: 'Inter', sans-serif;
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        #sidebar, #controls {
+            flex-shrink: 0;
+            background: var(--panel-bg);
+            z-index: 10;
+            overflow-y: auto;
+        }
+
+        #sidebar {
+            width: 400px;
+            padding: 30px;
+            box-shadow: 4px 0 20px rgba(0, 0, 0, 0.6);
+            border-right: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        #controls {
+            width: 330px;
+            padding: 24px 22px;
+            box-shadow: -4px 0 20px rgba(0, 0, 0, 0.6);
+            border-left: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        #controls .control-group:first-child { margin-top: 0; }
+
+        #sidebar::-webkit-scrollbar, #controls::-webkit-scrollbar { width: 8px; }
+        #sidebar::-webkit-scrollbar-thumb, #controls::-webkit-scrollbar-thumb {
+            background-color: rgba(255, 255, 255, 0.2);
+            border-radius: 4px;
+        }
+
+        #plot-container {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            background-color: var(--bg-dark);
+            height: 100vh;
+            min-width: 0;
+        }
+
+        #curve-plot, #lam-plot { width: 100%; min-height: 0; }
+        /* The curve is the point of the page; the multiplier history is a
+           supporting readout, so it gets the smaller share. */
+        #curve-plot { flex: 3; border-bottom: 1px solid rgba(255, 255, 255, 0.05); }
+        #lam-plot { flex: 2; }
+
+        h1 {
+            font-size: 2rem;
+            font-weight: 800;
+            color: var(--primary);
+            margin: 0 0 20px 0;
+            letter-spacing: -0.5px;
+        }
+
+        h3 {
+            font-size: 1.15rem;
+            color: var(--text-main);
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 8px;
+            margin-top: 30px;
+        }
+
+        p, li {
+            font-size: 1.02rem;
+            line-height: 1.6;
+            color: var(--text-main);
+            margin-bottom: 14px;
+        }
+
+        .control-group {
+            margin-top: 22px;
+            background: rgba(0, 0, 0, 0.3);
+            padding: 20px;
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        .control-group label {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+            color: var(--text-muted);
+            font-weight: 600;
+            font-size: 1rem;
+            align-items: center;
+        }
+
+        select {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 18px;
+            /* Opaque, not rgba(): the popup list composites against the
+               browser's own background, not the panel behind it. */
+            background: #171b22;
+            color: var(--text-main);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            font-family: inherit;
+            font-size: 0.98rem;
+            cursor: pointer;
+        }
+
+        select option { background: #171b22; color: var(--text-main); }
+        select option:checked { background: #2a313d; }
+        select:focus { outline: 2px solid var(--primary); }
+        select:last-child { margin-bottom: 0; }
+
+        input[type=range] {
+            width: 100%;
+            accent-color: var(--primary);
+            height: 8px;
+            border-radius: 4px;
+            outline: none;
+            margin-bottom: 6px;
+            cursor: pointer;
+        }
+
+        .readout {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            padding: 9px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+            font-size: 1rem;
+            gap: 10px;
+        }
+
+        .readout:last-child { border-bottom: none; }
+        .readout .k { color: var(--text-muted); }
+        .readout .v {
+            font-family: 'Courier New', monospace;
+            font-weight: bold;
+            font-size: 1.1rem;
+            color: var(--text-main);
+            white-space: nowrap;
+        }
+        .readout .v.hi { color: var(--primary); }
+
+        .btn {
+            flex: 1;
+            padding: 10px 6px;
+            background: rgba(255, 255, 255, 0.06);
+            color: var(--text-main);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            font-family: inherit;
+            font-size: 0.98rem;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .btn:hover { background: rgba(255, 255, 255, 0.12); }
+        .btn:disabled { opacity: 0.45; cursor: not-allowed; }
+        .btn:disabled:hover { background: rgba(255, 255, 255, 0.06); }
+        .btn.go:disabled:hover { background: var(--primary); }
+
+        .btn.go {
+            background: var(--primary);
+            border-color: var(--primary);
+            color: #0f1115;
+        }
+
+        .btn.go:hover { background: var(--primary-hover); }
+
+        .verdict {
+            margin-top: 16px;
+            padding: 14px;
+            border-radius: 8px;
+            font-size: 1rem;
+            line-height: 1.5;
+            border-left: 4px solid var(--text-muted);
+            background: rgba(255, 255, 255, 0.04);
+        }
+
+        .verdict.good { border-left-color: var(--accent-green); background: rgba(74, 222, 128, 0.08); }
+        .verdict.bad { border-left-color: var(--accent-red); background: rgba(255, 85, 85, 0.08); }
+        .verdict.warn { border-left-color: var(--primary); background: rgba(238, 187, 34, 0.08); }
+        .verdict strong { color: var(--text-main); }
+
+        .back-link {
+            display: inline-block;
+            margin-bottom: 20px;
+            color: var(--accent-blue);
+            text-decoration: none;
+            font-weight: 600;
+        }
+
+        .back-link:hover { text-decoration: underline; }
+
+        .note {
+            font-size: 0.92rem;
+            color: var(--text-muted);
+            line-height: 1.55;
+        }
+
+        .eq {
+            background: rgba(0, 0, 0, 0.35);
+            border-radius: 8px;
+            padding: 14px;
+            margin: 14px 0;
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            /* A wide equation scrolls sideways rather than forcing the panel
+               wider; zeroing MathJax's own margins keeps the box from growing
+               a spurious vertical scrollbar. */
+            overflow-x: auto;
+        }
+
+        .eq mjx-container[display] { margin: 0 !important; }
+
+        @media (max-width: 1250px) {
+            body { flex-wrap: wrap; height: auto; overflow: auto; }
+            #plot-container { height: 88vh; order: 1; flex: 1 1 460px; }
+            #controls { order: 2; height: 88vh; }
+            #sidebar {
+                order: 3; width: auto; flex: 1 1 100%; height: auto;
+                border-right: none; border-top: 1px solid rgba(255, 255, 255, 0.05);
+                box-shadow: none;
+            }
+        }
+
+        @media (max-width: 780px) {
+            body { flex-direction: column; }
+            #plot-container { height: 80vh; }
+            #controls { width: auto; height: auto; border-left: none; box-shadow: none; }
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Left: where the multiplier comes from. Middle: the curve and the value
+         of lambda as it is discovered. Right: everything you touch. -->
+    <div id="sidebar">
+        <a href="../index.html" class="back-link">&larr; Calculus of Variations</a>
+        <h1>Constrained Minimisation</h1>
+
+        <p>The <a href="../direct_method/index.html" style="color: var(--accent-blue);">direct method</a>
+            minimises \(I[y]\) over every curve joining the two endpoints. Most of the classical
+            problems are not like that: they come with a <strong>side condition</strong> the curve must
+            also satisfy &mdash; a chain has a fixed length, a fence encloses a fixed area. The quantity
+            to be minimised and the quantity that is fixed are <em>both</em> integrals of the curve.</p>
+
+        <h3>Why you cannot just descend</h3>
+        <p>Throughout this page \(I\) is the functional being minimised and \(J\) the one held fixed.
+            Take the hanging chain. It settles so as to minimise its potential energy, which for a
+            uniform chain of unit density is</p>
+
+        <div class="eq">
+            \[ I[y] \;=\; \int_a^b y\,\sqrt{1+(y')^2}\;dx. \]
+        </div>
+
+        <p>Descend that on its own and the chain simply falls: dropping any part of it lowers \(I\), and
+            nothing stops the process, so \(I\) is unbounded below and there is no minimiser at all. The
+            problem only becomes well posed once the length is fixed:</p>
+
+        <div class="eq">
+            \[ J[y] = \int_a^b \sqrt{1+(y')^2}\,dx = L. \]
+        </div>
+
+        <p class="note">Run the page with the chain and watch the top two numbers in the panel: they are
+            \(I_N\) and \(J_N\), the two integrals evaluated on the polyline. \(J_N\) is pulled to
+            \(L\) and stays there; \(I_N\) drops steeply and then drifts down. It does <em>not</em> fall
+            at every single step &mdash; the descent minimises \(K\) below, not \(I\) on its own, so the
+            energy is free to edge back up whenever the constraint hauls the chain in. It is the
+            constraint, not the energy, that decides how far the chain can drop.</p>
+
+        <h3>The multiplier</h3>
+        <p>The trick is the one from the
+            <a href="../lagrange/index.html" style="color: var(--accent-blue);">Lagrange multipliers</a>
+            page, moved from functions to functionals. There, a constrained stationary point of \(f\)
+            on \(g=\)const satisfies \(\nabla f=\lambda\nabla g\). Here, a constrained stationary point
+            of \(I\) on \(J=\)const satisfies the Euler&ndash;Lagrange equation not of \(I\), but of
+            the combination</p>
+
+        <div class="eq">
+            \[ K[y] \;=\; I[y] - \lambda\,J[y]. \]
+        </div>
+
+        <p>Writing \(F\) for the integrand of \(I\) and \(G\) for the integrand of \(J\), so that
+            \(K\) has integrand \(F-\lambda G\), that equation is the ordinary
+            Euler&ndash;Lagrange equation applied to \(K\):</p>
+
+        <div class="eq">
+            \[ \frac{\partial (F-\lambda G)}{\partial y}
+               = \frac{d}{dx}\frac{\partial (F-\lambda G)}{\partial y'} . \]
+        </div>
+
+        <p>The number \(\lambda\) is not given to you. It is fixed by the requirement that the solution
+            actually meets the constraint, and finding it is part of solving the problem. That is what
+            makes constrained problems harder than the unconstrained ones &mdash; and it is what this
+            page shows happening.</p>
+
+        <h3>What the page does</h3>
+        <p>Exactly as on the direct method page, the curve becomes an \(N\)-node polyline and both
+            integrals become ordinary functions of the heights \(y_1,\dots,y_{N-1}\), by the midpoint
+            rule on each segment. Write \(I_N\) and \(J_N\) for those, and \(c\) for the value the
+            constraint is held at &mdash; the length \(L\), or the area \(A\), depending on the problem.
+            The descent is run not on \(K_N\) itself but on \(K_N\) with a penalty attached,</p>
+
+        <div class="eq">
+            \[ \begin{aligned}
+                K_\mu = I_N &- \lambda\,(J_N-c) \\[2pt]
+                            &+ \tfrac{\mu}{2}\,(J_N-c)^2 ,
+               \end{aligned} \]
+        </div>
+
+        <p>and after every 20 steps the multiplier is nudged by</p>
+
+        <div class="eq">
+            \[ \lambda \;\longleftarrow\; \lambda - \mu\,(J_N - c). \]
+        </div>
+
+        <p>Read that update in words: <em>if the curve is coming out too long, raise the price of
+            length; if it is too short, lower it.</em> The extra \(\tfrac{\mu}{2}(J_N-c)^2\) is a penalty
+            that keeps the curve near the constraint while \(\lambda\) is still wrong &mdash; without it
+            the descent would wander far off before the multiplier caught up. Both extra terms vanish at
+            the answer, where \(J_N=c\) exactly.</p>
+
+        <p class="note">\(K_\mu\) differs from \(K_N\) by \(\lambda c\), which is constant in the
+            heights and so changes no derivative, plus the penalty, which vanishes at the answer. The
+            curve the descent settles on is therefore a stationary point of \(K\), exactly as the
+            multiplier argument above requires.</p>
+
+        <p class="note">\(\lambda\) starts at \(0\), which is to say the page starts by pretending there
+            is no constraint at all. Watch the lower plot: the value it settles on is a genuine
+            discovery of the algorithm, and it agrees with the analytic multiplier printed beneath it.</p>
+
+        <h3>\(\lambda\) is not just a number</h3>
+        <p id="lam-meaning">&mdash;</p>
+
+        <h3>The residual</h3>
+        <p>The panel reports</p>
+
+        <div class="eq">
+            \[ \max_j \left| \frac1h \frac{\partial K_N}{\partial y_j} \right| ,
+               \qquad K_N = I_N - \lambda J_N , \]
+        </div>
+
+        <p>which by the same two-segment argument as on the direct method page is the constrained
+            Euler&ndash;Lagrange expression above, up to \(O(h)\). When it reaches zero <em>and</em>
+            \(J_N=c\), both halves of the problem are solved at once.</p>
+
+        <h3>Why \(I_N\) does not equal \(I\)</h3>
+        <p class="note">As on the direct method page, a polyline with \(N\) nodes is not the exact
+            curve, so the converged values differ from the analytic ones in the fourth decimal or so
+            and shrink like \(h^2\) as \(N\) grows. The same goes for \(\lambda\).</p>
+
+        <h3>Where this sits</h3>
+        <p class="note">Three pages, one idea seen three ways. The
+            <a href="../euler_lagrange/index.html" style="color: var(--accent-blue);">Euler&ndash;Lagrange</a>
+            page asks whether a given curve is stationary; the
+            <a href="../direct_method/index.html" style="color: var(--accent-blue);">direct method</a>
+            finds the stationary curve by descending; this page does the same when the curve is not free
+            to be anything it likes. The
+            <a href="../lagrange/index.html" style="color: var(--accent-blue);">Lagrange multipliers</a>
+            page is the finite-dimensional version of precisely this \(\lambda\), and
+            <a href="../dido/index.html" style="color: var(--accent-blue);">Dido's problem</a> and
+            <a href="../soap_bubbles/index.html" style="color: var(--accent-blue);">Soap Bubbles</a>
+            show the closed-form answers this method reaches numerically.</p>
+    </div>
+
+    <div id="plot-container">
+        <div id="curve-plot"></div>
+        <div id="lam-plot"></div>
+    </div>
+
+    <div id="controls">
+        <div class="control-group">
+            <label for="problem-select"><span>Problem</span></label>
+            <select id="problem-select"></select>
+        </div>
+
+        <div class="control-group">
+            <label for="target-slider">
+                <span id="target-label">Constraint</span>
+                <span id="target-display" style="color: var(--primary); font-size: 1.2rem;">&mdash;</span>
+            </label>
+            <input type="range" id="target-slider" min="0" max="1" step="0.01" value="0.5">
+
+            <label for="n-slider" style="margin-top: 14px;">
+                <span>Nodes \(N\)</span>
+                <span id="n-display" style="color: var(--primary); font-size: 1.2rem;">40</span>
+            </label>
+            <input type="range" id="n-slider" min="6" max="80" step="1" value="40">
+
+            <label for="speed-slider" style="margin-top: 14px;"
+                   title="How many descent steps to take between redraws of the plots">
+                <span>Steps per redraw</span>
+                <span id="speed-display" style="color: var(--primary); font-size: 1.2rem;">15</span>
+            </label>
+            <input type="range" id="speed-slider" min="1" max="500" step="1" value="15">
+
+            <div style="display: flex; gap: 8px; margin-top: 16px;">
+                <button id="btn-run" class="btn go" title="Repeat the descent step until the constraint holds and the residual is zero">Descend</button>
+                <button id="btn-redraw" class="btn" title="Take the chosen number of descent steps, then stop">Redraw</button>
+                <button id="btn-reset" class="btn" title="Throw the curve away and start again, with the multiplier back at zero">Reset</button>
+            </div>
+        </div>
+
+        <div class="control-group">
+            <label><span>Where the descent has got to</span></label>
+            <div class="readout"><span class="k" id="k-obj">\(I_N\)</span>
+                <span class="v" id="out-obj">&mdash;</span></div>
+            <div class="readout"><span class="k" id="k-con">\(J_N\)</span>
+                <span class="v" id="out-con">&mdash;</span></div>
+            <div class="readout"><span class="k">constraint error</span>
+                <span class="v" id="out-cerr">&mdash;</span></div>
+            <div class="readout"><span class="k">residual</span>
+                <span class="v" id="out-resid">&mdash;</span></div>
+            <div class="readout"><span class="k">steps taken</span>
+                <span class="v" id="out-iter">0</span></div>
+        </div>
+
+        <div class="control-group">
+            <label><span>The multiplier</span></label>
+            <div class="readout"><span class="k">\(\lambda\) &mdash; found</span>
+                <span class="v hi" id="out-lam">&mdash;</span></div>
+            <div class="readout"><span class="k">\(\lambda\) &mdash; exact</span>
+                <span class="v" id="out-lamex">&mdash;</span></div>
+            <div class="readout"><span class="k" id="k-geom">meaning</span>
+                <span class="v" id="out-geom">&mdash;</span></div>
+            <div id="verdict" class="verdict">Press <strong>Descend</strong> to start improving the
+                curve, or <strong>Redraw</strong> to take the chosen number of steps and stop.</div>
+        </div>
+    </div>
+
+    <script>
+        const $ = id => document.getElementById(id);
+
+        // f is monotone on [lo,hi] with a sign change; 200 halvings is exact to rounding.
+        function bisect(f, lo, hi) {
+            for (let i = 0; i < 200; i++) {
+                const m = 0.5 * (lo + hi);
+                if (f(lo) * f(m) <= 0) hi = m; else lo = m;
+            }
+            return 0.5 * (lo + hi);
+        }
+
+        // Arc length of a smooth graph, for fitting the comparison parabola.
+        function arcLength(f, a, b, n) {
+            let s = 0;
+            const dx = (b - a) / n;
+            for (let i = 0; i < n; i++) {
+                const x = a + (i + 0.5) * dx;
+                const d = (f(x + 1e-7) - f(x - 1e-7)) / 2e-7;
+                s += Math.sqrt(1 + d * d);
+            }
+            return s * dx;
+        }
+
+        // ── The problems ─────────────────────────────────────────────────────
+        // Each carries two integrands — the one being minimised (obj) and the
+        // one being held fixed (con) — plus the analytic solution and the
+        // analytic multiplier to check the found one against.
+        //
+        // The slider caps are not cosmetic. Past them the exact solution has
+        // near-vertical ends, a graph y(x) resolves it badly, and the measured
+        // shape error stops falling like h^2 (Dido: ratio 3.97 at L=1.30,
+        // 2.12 at L=1.45). Each range stops while the convergence is honest.
+        const PROBLEMS = [
+            {
+                id: 'chain',
+                label: 'Hanging chain:  minimise ∫ y ds  subject to  ∫ ds = L',
+                a: 0, b: 1, ya: 0, yb: 0,
+                objTex: '\\int_0^1 y\\sqrt{1+(y\')^2}\\,dx', objName: 'potential energy',
+                conTex: '\\int_0^1 \\sqrt{1+(y\')^2}\\,dx', conName: 'length',
+                obj: {
+                    F:  (x, y, p) => y * Math.sqrt(1 + p * p),
+                    Fy: (x, y, p) => Math.sqrt(1 + p * p),
+                    Fp: (x, y, p) => y * p / Math.sqrt(1 + p * p)
+                },
+                con: {
+                    F:  (x, y, p) => Math.sqrt(1 + p * p),
+                    Fy: () => 0,
+                    Fp: (x, y, p) => p / Math.sqrt(1 + p * p)
+                },
+                tMin: 1.05, tMax: 3, tStep: 0.05, tDefault: 2.5,
+                tLabel: 'chain length \\(L\\)',
+                mu: 50, speed: 15,
+                solve(L) {
+                    // y = a cosh((x-1/2)/a) + c through (0,0),(1,0) with length L
+                    const a = bisect(t => 2 * t * Math.sinh(1 / (2 * t)) - L, 1e-6, 1e4);
+                    const c = -a * Math.cosh(1 / (2 * a));
+                    return { y: x => a * Math.cosh((x - 0.5) / a) + c, lam: c, a: a, c: c };
+                },
+                start: (u, T) => -0.6 * (T - 1) * Math.sin(Math.PI * u),
+                lamGeom: 'directrix',
+                // Not the directrix height: that is lambda itself, already two
+                // rows above. The parabola's energy is the row that pays here,
+                // because it is the number that settles the misconception.
+                extra: {
+                    label: 'that parabola\u2019s energy',
+                    value: () => {
+                        const d = parabolaSag(target), n = 2000, dx = 1 / n;
+                        let s = 0;
+                        for (let i = 0; i < n; i++) {
+                            const x = (i + 0.5) * dx;
+                            s += (-4 * d * x * (1 - x)) * Math.sqrt(1 + Math.pow(-4 * d * (1 - 2 * x), 2));
+                        }
+                        return s * dx;
+                    }
+                },
+                meaning: 'For the chain, \\(\\lambda\\) is the height of the <strong>directrix</strong>: ' +
+                         'the catenary is \\(y-\\lambda = a\\cosh\\!\\big((x-\\tfrac12)/a\\big)\\), so ' +
+                         '\\(\\lambda\\) is the level the chain hangs from. It is drawn on the upper plot ' +
+                         'as a horizontal line, and you can watch it slide into place as the descent runs. ' +
+                         'A number that looked like bookkeeping turns out to be a line in the picture.',
+                note: 'The dotted grey curve is the parabola through the same two points with the same ' +
+                      'length. Students routinely expect the chain to be one. Make the chain long and the ' +
+                      'two visibly part company &mdash; and the readout shows the parabola always costs ' +
+                      'more energy.',
+                parabola: true
+            },
+            {
+                id: 'dido',
+                label: 'Dido / fence:  maximise ∫ y dx  subject to  ∫ ds = L',
+                a: 0, b: 1, ya: 0, yb: 0,
+                objTex: '-\\int_0^1 y\\,dx', objName: 'minus the area',
+                conTex: '\\int_0^1 \\sqrt{1+(y\')^2}\\,dx', conName: 'length',
+                // Maximising the area is minimising its negative, which is what
+                // lets one descent engine serve every problem here.
+                obj: { F: (x, y, p) => -y, Fy: () => -1, Fp: () => 0 },
+                con: {
+                    F:  (x, y, p) => Math.sqrt(1 + p * p),
+                    Fy: () => 0,
+                    Fp: (x, y, p) => p / Math.sqrt(1 + p * p)
+                },
+                tMin: 1.05, tMax: 1.3, tStep: 0.01, tDefault: 1.22,
+                tLabel: 'fence length \\(L\\)',
+                mu: 50, speed: 8,
+                solve(L) {
+                    // Circular arc, chord 1, arc length L: theta/sin(theta) = L
+                    const th = bisect(t => t / Math.sin(t) - L, 1e-9, Math.PI - 1e-9);
+                    const R = 1 / (2 * Math.sin(th)), yc = -R * Math.cos(th);
+                    return {
+                        y: x => Math.sqrt(Math.max(0, R * R - (x - 0.5) * (x - 0.5))) + yc,
+                        lam: -R, R: R, yc: yc
+                    };
+                },
+                start: (u, T) => 0.8 * (T - 1) * Math.sin(Math.PI * u),
+                lamGeom: 'circle',
+                radiusOf: lam => Math.abs(lam),
+                extra: { label: 'arc radius  |\u03bb|', value: () => Math.abs(st.lam) },
+                meaning: 'Here the Euler&ndash;Lagrange equation for \\(-y-\\lambda\\sqrt{1+(y\')^2}\\) ' +
+                         'forces the <strong>curvature to be constant</strong>, so the answer is a circular ' +
+                         'arc &mdash; and \\(|\\lambda|\\) is its <strong>radius</strong>. The upper plot ' +
+                         'draws the full circle of radius \\(|\\lambda|\\); as the descent converges the ' +
+                         'polyline settles onto it.',
+                note: 'The isoperimetric problem: of all fences of length \\(L\\) spanning the same two ' +
+                      'points, the circular arc encloses the most. Because the page descends, it is run ' +
+                      'as minimising \\(-\\!\\int y\\,dx\\).'
+            },
+            {
+                id: 'dual',
+                label: 'The dual:  minimise ∫ ds  subject to  ∫ y dx = A',
+                a: 0, b: 1, ya: 0, yb: 0,
+                objTex: '\\int_0^1 \\sqrt{1+(y\')^2}\\,dx', objName: 'length',
+                conTex: '\\int_0^1 y\\,dx', conName: 'area',
+                obj: {
+                    F:  (x, y, p) => Math.sqrt(1 + p * p),
+                    Fy: () => 0,
+                    Fp: (x, y, p) => p / Math.sqrt(1 + p * p)
+                },
+                con: { F: (x, y, p) => y, Fy: () => 1, Fp: () => 0 },
+                tMin: 0.05, tMax: 0.25, tStep: 0.01, tDefault: 0.18,
+                tLabel: 'enclosed area \\(A\\)',
+                mu: 200, speed: 5,
+                solve(A) {
+                    const th = bisect(t => {
+                        const R = 1 / (2 * Math.sin(t));
+                        return R * R * (t - Math.sin(t) * Math.cos(t)) - A;
+                    }, 1e-6, Math.PI / 2 - 1e-6);
+                    const R = 1 / (2 * Math.sin(th)), yc = -R * Math.cos(th);
+                    return {
+                        y: x => Math.sqrt(Math.max(0, R * R - (x - 0.5) * (x - 0.5))) + yc,
+                        lam: 1 / R, R: R, yc: yc
+                    };
+                },
+                start: (u, T) => 1.6 * T * Math.sin(Math.PI * u),
+                lamGeom: 'circle',
+                radiusOf: lam => 1 / Math.abs(lam),
+                extra: { label: 'arc radius  1/\u03bb', value: () => 1 / Math.abs(st.lam) },
+                meaning: 'The same problem with the roles swapped: now length is minimised and area is ' +
+                         'fixed. The answer is again a circular arc, but this time \\(\\lambda\\) is the ' +
+                         '<strong>curvature</strong> \\(1/R\\) rather than the radius. Swapping which ' +
+                         'integral is the objective inverts the multiplier &mdash; worth seeing, because ' +
+                         'it shows \\(\\lambda\\) carries units and is not just a fudge factor.',
+                note: 'Of all curves spanning the two points and enclosing area \\(A\\), the circular arc ' +
+                      'is the shortest. Compare with Dido above: same family of answers, opposite question.'
+            }
+        ];
+
+        // ── Discrete functionals and their gradients ─────────────────────────
+        // Midpoint rule on each segment, exactly as on the direct method page:
+        //   ∫ ≈ Σ_k F(x̄_k, ȳ_k, p_k) h,  x̄ = x_k + h/2, ȳ = (y_k+y_{k+1})/2.
+        function integrate(G, P, y, h) {
+            let s = 0;
+            for (let k = 0; k < y.length - 1; k++) {
+                const p = (y[k + 1] - y[k]) / h;
+                s += G.F(P.a + (k + 0.5) * h, 0.5 * (y[k] + y[k + 1]), p);
+            }
+            return s * h;
+        }
+
+        // grad[j] = ∂/∂y_j of that sum. y_j sits in segments j−1 and j only, so
+        // only those two contribute; the pinned ends stay at zero.
+        function gradInto(G, P, y, h, g) {
+            const N = y.length - 1;
+            g.fill(0);
+            for (let k = 0; k < N; k++) {
+                const p = (y[k + 1] - y[k]) / h;
+                const xm = P.a + (k + 0.5) * h, ym = 0.5 * (y[k] + y[k + 1]);
+                const fy = G.Fy(xm, ym, p), fp = G.Fp(xm, ym, p);
+                g[k]     += 0.5 * h * fy - fp;
+                g[k + 1] += 0.5 * h * fy + fp;
+            }
+            g[0] = 0; g[N] = 0;
+            return g;
+        }
+
+        // ── State ────────────────────────────────────────────────────────────
+        let problem = PROBLEMS[0];
+        let N = 40, stepsPerFrame = 15, target = problem.tDefault;
+        let y, h, st, iters = 0, running = false, stalled = false, converged = false, raf = null;
+        let lamHist = [], exact = null;
+        // How often the multiplier is updated. Every step is unstable — lambda
+        // chases noise in a curve that has not settled; every 20 lets the
+        // descent make real progress at a fixed price before the price moves.
+        const LAM_EVERY = 20;
+        // Both must hold: a curve can satisfy its constraint and still not be
+        // stationary, and vice versa.
+        const R_TOL = 1e-4, C_TOL = 1e-7;
+
+        function makeState() {
+            h = (problem.b - problem.a) / N;
+            y = new Float64Array(N + 1);
+            for (let i = 0; i <= N; i++) {
+                const u = i / N;
+                y[i] = problem.ya + (problem.yb - problem.ya) * u;
+                if (i > 0 && i < N) y[i] += problem.start(u, target);
+            }
+            st = {
+                lam: 0, mu: problem.mu, t: 1e-3,
+                gJ: new Float64Array(N + 1), gC: new Float64Array(N + 1),
+                g: new Float64Array(N + 1), trial: new Float64Array(N + 1)
+            };
+            iters = 0; stalled = false; converged = false;
+            lamHist = [{ it: 0, lam: 0 }];
+        }
+
+        // K_mu = I_N - lambda (J_N - c) + (mu/2)(J_N - c)^2, the functional the
+        // descent actually moves down. It differs from K = I - lambda J by a
+        // constant plus a penalty that is zero at the answer.
+        function Kmu(v) {
+            const c = integrate(problem.con, problem, v, h) - target;
+            return integrate(problem.obj, problem, v, h) - st.lam * c + 0.5 * st.mu * c * c;
+        }
+
+        /**
+         * One step of descent on K_mu, with a backtracking line search: halve
+         * the step until K_mu actually decreases, then double the starting step
+         * for next time. Every LAM_EVERY steps the multiplier is nudged.
+         * Returns false once no step decreases K_mu.
+         */
+        function descend() {
+            const c = integrate(problem.con, problem, y, h) - target;
+            gradInto(problem.obj, problem, y, h, st.gJ);
+            gradInto(problem.con, problem, y, h, st.gC);
+            const w = -st.lam + st.mu * c;
+            for (let j = 1; j < N; j++) st.g[j] = st.gJ[j] + w * st.gC[j];
+            let gg = 0;
+            for (let j = 1; j < N; j++) gg += st.g[j] * st.g[j];
+            if (!(gg > 0)) return false;
+
+            const A0 = Kmu(y);
+            let t = st.t;
+            st.trial.set(y);
+            for (let q = 0; q < 60; q++) {
+                for (let j = 1; j < N; j++) st.trial[j] = y[j] - t * st.g[j];
+                const A1 = Kmu(st.trial);
+                if (isFinite(A1) && A1 <= A0 - 1e-4 * t * gg) {
+                    y.set(st.trial);
+                    st.t = t * 2;
+                    iters++;
+                    if (iters % LAM_EVERY === 0) {
+                        st.lam -= st.mu * (integrate(problem.con, problem, y, h) - target);
+                        lamHist.push({ it: iters, lam: st.lam });
+                    }
+                    return true;
+                }
+                t *= 0.5;
+            }
+            st.t = t;
+            return false;
+        }
+
+        function maxResidual() {
+            gradInto(problem.obj, problem, y, h, st.gJ);
+            gradInto(problem.con, problem, y, h, st.gC);
+            let m = 0;
+            for (let j = 1; j < N; j++) {
+                m = Math.max(m, Math.abs((st.gJ[j] - st.lam * st.gC[j]) / h));
+            }
+            return m;
+        }
+
+        const consErr = () => Math.abs(integrate(problem.con, problem, y, h) - target);
+
+        // ── The equal-length parabola, for the chain ────────────────────────
+        // Recomputed only when L moves, since fitting it costs a bisection over
+        // a quadrature.
+        let paraCache = { L: null, d: 0 };
+        function parabolaSag(L) {
+            if (paraCache.L !== L) {
+                paraCache = { L: L, d: bisect(t => arcLength(x => -4 * t * x * (1 - x), 0, 1, 400) - L, 1e-9, 50) };
+            }
+            return paraCache.d;
+        }
+
+        // ── Plots ────────────────────────────────────────────────────────────
+        const BASE = {
+            paper_bgcolor: '#0f1115', plot_bgcolor: '#0f1115',
+            font: { color: '#e2e8f0', family: 'Inter, sans-serif', size: 13 },
+            margin: { t: 44, r: 24, b: 48, l: 62 },
+            xaxis: { gridcolor: 'rgba(255,255,255,0.08)', zerolinecolor: 'rgba(255,255,255,0.25)' },
+            yaxis: { gridcolor: 'rgba(255,255,255,0.08)', zerolinecolor: 'rgba(255,255,255,0.25)' },
+            legend: { bgcolor: 'rgba(0,0,0,0.35)', bordercolor: 'rgba(255,255,255,0.1)', borderwidth: 1 }
+        };
+        const CONFIG = { responsive: true, displayModeBar: false };
+        const clone = o => JSON.parse(JSON.stringify(o));
+
+        function draw() {
+            const xs = [];
+            for (let k = 0; k <= N; k++) xs.push(problem.a + k * h);
+
+            // A finer sample for the analytic curve, so the overlay stays smooth
+            // even when N is small.
+            const fx = [], fy = [];
+            for (let i = 0; i <= 300; i++) {
+                const xv = problem.a + (problem.b - problem.a) * i / 300;
+                fx.push(xv); fy.push(exact.y(xv));
+            }
+
+            const traces = [
+                { x: fx, y: fy, mode: 'lines', name: 'exact solution',
+                  line: { color: '#94a3b8', width: 2, dash: 'dash' } }
+            ];
+
+            if (problem.parabola) {
+                const d = parabolaSag(target);
+                traces.push({
+                    x: fx, y: fx.map(xv => -4 * d * xv * (1 - xv)), mode: 'lines',
+                    name: 'parabola, same length',
+                    line: { color: '#64748b', width: 1.5, dash: 'dot' }
+                });
+            }
+
+            // Lambda, drawn rather than merely printed.
+            if (problem.lamGeom === 'directrix') {
+                traces.push({
+                    x: [problem.a, problem.b], y: [st.lam, st.lam], mode: 'lines',
+                    name: 'directrix  y = λ',
+                    line: { color: '#a855f7', width: 2 }
+                });
+            } else if (problem.lamGeom === 'circle' && st.lam !== 0) {
+                const R = problem.radiusOf(st.lam);
+                if (isFinite(R) && R > 0 && R < 50) {
+                    const cx = 0.5 * (problem.a + problem.b);
+                    const cy = y[Math.round(N / 2)] - R;
+                    const px = [], py = [];
+                    for (let i = 0; i <= 200; i++) {
+                        const th = 2 * Math.PI * i / 200;
+                        px.push(cx + R * Math.sin(th)); py.push(cy + R * Math.cos(th));
+                    }
+                    traces.push({
+                        x: px, y: py, mode: 'lines', name: 'circle of radius |λ|',
+                        line: { color: '#a855f7', width: 1.5 }
+                    });
+                }
+            }
+
+            traces.push(
+                { x: xs, y: Array.from(y), mode: 'lines+markers', name: 'polyline',
+                  line: { color: '#eebb22', width: 2.5 },
+                  marker: { color: '#eebb22', size: N > 50 ? 4 : 6 } },
+                { x: [xs[0], xs[N]], y: [y[0], y[N]], mode: 'markers', name: 'pinned ends',
+                  marker: { color: '#4ade80', size: 11 } }
+            );
+
+            const cl = clone(BASE);
+            cl.title = { text: 'The curve, and λ drawn on it', font: { size: 15 } };
+            cl.xaxis.title = { text: 'x' };
+            cl.yaxis.title = { text: 'y' };
+            // Frame the arc together with the centre of its circle, so the
+            // radius reads as a radius; the rest of the circle runs off the
+            // view rather than shrinking the arc to nothing. The centre used
+            // is the analytic one, which does not move, so the axes stay put
+            // while lambda settles.
+            if (problem.lamGeom === 'circle') {
+                let lo = 0, hi = 0;
+                for (let k = 0; k <= N; k++) { lo = Math.min(lo, y[k]); hi = Math.max(hi, y[k]); }
+                if (exact.yc !== undefined) lo = Math.min(lo, exact.yc);
+                const pad = 0.25 * Math.max(0.2, hi - lo);
+                cl.yaxis.range = [lo - pad, hi + pad];
+                cl.yaxis.autorange = false;
+            }
+            Plotly.react('curve-plot', traces, cl, CONFIG);
+
+            // Lambda's history, against the value it should reach.
+            const ll = clone(BASE);
+            ll.title = { text: 'λ, as the descent discovers it', font: { size: 15 } };
+            ll.xaxis.title = { text: 'descent step' };
+            ll.yaxis.title = { text: 'λ' };
+            ll.showlegend = true;
+            const lastIt = Math.max(iters, 1);
+            Plotly.react('lam-plot', [
+                { x: [0, lastIt], y: [exact.lam, exact.lam], mode: 'lines', name: 'exact λ',
+                  line: { color: '#94a3b8', width: 2, dash: 'dash' } },
+                { x: lamHist.map(d => d.it), y: lamHist.map(d => d.lam), mode: 'lines',
+                  name: 'λ found', line: { color: '#a855f7', width: 2.5 } }
+            ], ll, CONFIG);
+
+            // Readouts
+            const J = integrate(problem.obj, problem, y, h);
+            const C = integrate(problem.con, problem, y, h);
+            const resid = maxResidual(), ce = consErr();
+            $('out-obj').textContent = J.toFixed(6);
+            $('out-con').textContent = C.toFixed(6) + '  /  ' + target.toFixed(2);
+            $('out-cerr').textContent = ce.toExponential(2);
+            $('out-resid').textContent = resid.toExponential(2);
+            $('out-iter').textContent = String(iters);
+            $('out-lam').textContent = st.lam.toFixed(6);
+            $('out-lamex').textContent = exact.lam.toFixed(6);
+            $('out-geom').textContent = problem.extra.value().toFixed(6);
+
+            const v = $('verdict');
+            if (converged) {
+                v.className = 'verdict good';
+                v.innerHTML = '<strong>Solved.</strong> The constraint holds to ' +
+                    ce.toExponential(1) + ' and the constrained Euler&ndash;Lagrange residual is ' +
+                    resid.toExponential(1) + '. The multiplier came out at \\(\\lambda=' +
+                    st.lam.toFixed(4) + '\\) against the analytic \\(' + exact.lam.toFixed(4) +
+                    '\\) &mdash; found, not supplied.';
+            } else if (stalled) {
+                v.className = 'verdict bad';
+                v.innerHTML = '<strong>Stopped.</strong> No step size decreases \\(K_\\mu\\) any more. ' +
+                    'Try a smaller \\(N\\), or Reset.';
+            } else if (iters === 0) {
+                v.className = 'verdict';
+                v.innerHTML = 'Press <strong>Descend</strong> to start improving the curve, or ' +
+                    '<strong>Redraw</strong> to take the chosen number of steps and stop.';
+            } else {
+                v.className = 'verdict warn';
+                v.innerHTML = '<strong>Descending.</strong> Constraint error ' + ce.toExponential(1) +
+                    ', residual ' + resid.toExponential(1) + '. Both must reach zero.';
+            }
+            if (window.MathJax && MathJax.typesetPromise) {
+                MathJax.typesetPromise([v]).catch(() => {});
+            }
+        }
+
+        // ── Animation ────────────────────────────────────────────────────────
+        function frame() {
+            if (!running) return;
+            for (let i = 0; i < stepsPerFrame; i++) {
+                if (!descend()) { stalled = true; running = false; break; }
+            }
+            if (maxResidual() < R_TOL && consErr() < C_TOL) { converged = true; running = false; }
+            draw();
+            syncRunButton();
+            if (running) raf = requestAnimationFrame(frame);
+        }
+
+        function syncRunButton() {
+            const b = $('btn-run');
+            b.textContent = running ? 'Pause' : 'Descend';
+            b.disabled = stalled || converged;
+            $('btn-redraw').disabled = stalled || converged;
+        }
+
+        function reset() {
+            if (raf) cancelAnimationFrame(raf);
+            makeState();
+            exact = problem.solve(target);
+            draw();
+            syncRunButton();
+        }
+
+        // ── Wiring ───────────────────────────────────────────────────────────
+        function syncTargetSlider() {
+            const s = $('target-slider');
+            s.min = String(problem.tMin); s.max = String(problem.tMax);
+            s.step = String(problem.tStep); s.value = String(target);
+            $('target-display').textContent = target.toFixed(2);
+            $('target-label').innerHTML = problem.tLabel;
+        }
+
+        function loadProblem() {
+            problem = PROBLEMS[parseInt($('problem-select').value, 10)];
+            target = problem.tDefault;
+            stepsPerFrame = problem.speed;
+            running = false;
+            syncTargetSlider();
+            $('speed-slider').value = String(stepsPerFrame);
+            $('speed-display').textContent = String(stepsPerFrame);
+            $('k-obj').innerHTML = '\\(I_N\\) &mdash; ' + problem.objName;
+            $('k-con').innerHTML = '\\(J_N\\) &mdash; ' + problem.conName;
+            $('k-geom').textContent = problem.extra.label;
+            $('lam-meaning').innerHTML = problem.meaning +
+                '<span class="note" style="display:block;margin-top:10px">' + problem.note + '</span>';
+            reset();
+            if (window.MathJax && MathJax.typesetPromise) {
+                MathJax.typesetPromise([$('controls'), $('lam-meaning')]).catch(() => {});
+            }
+        }
+
+        PROBLEMS.forEach((p, i) => {
+            const o = document.createElement('option');
+            o.value = String(i); o.textContent = p.label;
+            $('problem-select').appendChild(o);
+        });
+
+        $('problem-select').addEventListener('change', loadProblem);
+        $('target-slider').addEventListener('input', e => {
+            target = parseFloat(e.target.value);
+            $('target-display').textContent = target.toFixed(2);
+            running = false; reset();
+        });
+        $('n-slider').addEventListener('input', e => {
+            N = parseInt(e.target.value, 10);
+            $('n-display').textContent = String(N);
+            running = false; reset();
+        });
+        $('speed-slider').addEventListener('input', e => {
+            stepsPerFrame = parseInt(e.target.value, 10);
+            $('speed-display').textContent = String(stepsPerFrame);
+        });
+        $('btn-run').addEventListener('click', () => {
+            if (stalled || converged) return;
+            running = !running;
+            syncRunButton();
+            if (running) raf = requestAnimationFrame(frame);
+            else if (raf) cancelAnimationFrame(raf);
+        });
+        // One click does exactly what one animation frame does — the same batch
+        // of steps, plotted once at the end.
+        $('btn-redraw').addEventListener('click', () => {
+            running = false; syncRunButton();
+            if (stalled || converged) return;
+            for (let i = 0; i < stepsPerFrame; i++) {
+                if (!descend()) { stalled = true; break; }
+            }
+            if (maxResidual() < R_TOL && consErr() < C_TOL) converged = true;
+            draw();
+            syncRunButton();
+        });
+        $('btn-reset').addEventListener('click', () => { running = false; reset(); });
+
+        $('problem-select').value = '0';
+        loadProblem();
+    </script>
+</body>
+
+</html>
