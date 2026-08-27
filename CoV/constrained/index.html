@@ -414,10 +414,7 @@
         <p>So a penalty is attached, and the descent runs on</p>
 
         <div class="eq">
-            \[ \begin{aligned}
-                K_\mu = I_N &- \lambda\,(J_N-c) \\[2pt]
-                            &+ \tfrac{\mu}{2}\,(J_N-c)^2 .
-               \end{aligned} \]
+            \[ K_\mu \;=\; K_N \;+\; \tfrac{\mu}{2}\,(J_N-c)^2 . \]
         </div>
 
         <p>The added term is zero when the constraint holds and grows as the <em>square</em> of the
@@ -433,13 +430,13 @@
         </div>
 
         <p>Read that in words: <em>if the curve is coming out too long, raise the price of length; if it
-            is too short, lower it.</em> Both added terms vanish at the answer, where \(J_N=c\) exactly,
-            so neither of them biases where the descent ends up.</p>
+            is too short, lower it.</em></p>
 
-        <p class="note">\(K_\mu\) differs from \(K_N\) by \(\lambda c\), which is constant in the
-            heights and so changes no derivative, plus the penalty, which vanishes at the answer. The
-            curve the descent settles on is therefore a stationary point of \(K\), exactly as the
-            multiplier argument above requires.</p>
+        <p class="note">Note what is <em>not</em> changed by any of this. The penalty vanishes at the
+            answer, where \(J_N=c\) exactly, so the curve the descent settles on is a stationary point
+            of \(K_N\) itself &mdash; which is to say it satisfies
+            \(\nabla I_N = \lambda\nabla J_N\), exactly what the argument above asked for. The
+            penalty is scaffolding for getting there, not part of the answer.</p>
 
         <h3>What \(\mu\) is, and why 20 steps</h3>
         <p>\(\mu>0\) is the stiffness of that spring. Notice that the <em>same</em> \(\mu\) is also
@@ -789,12 +786,16 @@
             lamHist = [{ it: 0, lam: 0 }];
         }
 
-        // K_mu = I_N - lambda (J_N - c) + (mu/2)(J_N - c)^2, the functional the
-        // descent actually moves down. It differs from K = I - lambda J by a
-        // constant plus a penalty that is zero at the answer.
+        // K_mu = K_N + (mu/2)(J_N - c)^2, the functional the descent actually
+        // moves down: the discrete K_N = I_N - lambda J_N whose stationary
+        // points we want, plus a penalty that is zero at the answer.
+        // The gradient is unaffected by writing it this way rather than with
+        // (J_N - c) in the linear term -- the two differ by the constant
+        // lambda*c -- but this form is the one the sidebar describes.
         function Kmu(v) {
-            const c = integrate(problem.con, problem, v, h) - target;
-            return integrate(problem.obj, problem, v, h) - st.lam * c + 0.5 * st.mu * c * c;
+            const J = integrate(problem.con, problem, v, h);
+            const d = J - target;
+            return integrate(problem.obj, problem, v, h) - st.lam * J + 0.5 * st.mu * d * d;
         }
 
         /**
