@@ -310,8 +310,7 @@
         <a href="../index.html" class="back-link">&larr; Calculus of Variations</a>
         <h1>Is It a Minimum?</h1>
 
-        <p>Solving the Euler&ndash;Lagrange equation gives a <strong>stationary</strong> curve, and
-            that is all it gives.</p>
+        <p>Solving the Euler&ndash;Lagrange equation gives a <strong>stationary</strong> curve.</p>
 
         <h3>What stationary means</h3>
         <p>It has a precise meaning. Take any variation \(\eta\) that vanishes at both endpoints, so
@@ -321,28 +320,25 @@
             \[ \left.\frac{d}{d\varepsilon} I[y+\varepsilon\eta]\right|_{\varepsilon=0} = 0 . \]
         </div>
 
-        <p>One number, zero, for each choice of \(\eta\) &mdash; and it holds for <em>every</em>
-            admissible \(\eta\), not merely some. In words: the rate at which \(I\) changes as you
-            set off from \(y\) is zero, whichever direction you set off in. Nothing beyond that is
-            being claimed.</p>
+        <p>I.e., the rate at which \(I\) changes as you set off from \(y\) is zero, whichever direction 
+            you set off in.</p>
 
-        <h3>Why that is not enough</h3>
-        <p>In one variable the same statement is \(f'(x)=0\), and you already know what it does not
-            settle: a stationary point may be a minimum, a maximum, or neither, and the first
+        <h3>Not necessarily a minimum</h3>
+        <p>In one variable the equivalent statement is \(f'(x)=0\), and we know that a stationary point may be a minimum, a maximum, or neither, and the first
             derivative alone cannot tell you which.</p>
 
         <p>Curves are no different. The
             <a href="../euler_lagrange/index.html" style="color: var(--accent-blue);">first
             variation</a> is a necessary condition, not a sufficient one, and deciding between the
-            cases needs the <em>second</em> derivative. That is all this page does.</p>
+            cases needs the <em>second</em> derivative.</p>
 
-        <h3>The test you already know</h3>
-        <p>Discretise as on the
+        <h3>Second derivative test</h3>
+        <p>If we discretise as on the
             <a href="../direct_method/index.html" style="color: var(--accent-blue);">direct method</a>
             page: an \(N\)-node polyline turns \(I[y]\) into an ordinary function \(I_N\) of the
             \(N-1\) interior heights. A stationary curve is a point where \(\nabla I_N = 0\), and for a
             function of several variables the second-derivative test is the one from multivariable
-            calculus &mdash; look at the matrix of second partials, the <strong>Hessian</strong>:</p>
+            calculus where we look at the <strong>Hessian</strong> matrix:</p>
 
         <div class="eq">
             \[ H_{ij} \;=\; \frac{\partial^2 I_N}{\partial y_i\,\partial y_j}. \]
@@ -351,10 +347,18 @@
         <p>\(H\) is symmetric, so it has real eigenvalues, and the rule is the familiar one:</p>
 
         <ul>
-            <li>every eigenvalue \(>0\) &mdash; a <strong>minimum</strong>;</li>
+            <li>every eigenvalue \(>0\) &mdash; a <strong>local minimum</strong>;</li>
             <li>some eigenvalue \(<0\) &mdash; <strong>not</strong> a minimum;</li>
-            <li>an eigenvalue at \(0\) &mdash; the test is inconclusive, as ever.</li>
+            <li>none negative, but one equal to \(0\) &mdash; inconclusive, as ever.</li>
         </ul>
+
+        <p class="note"><em>Local</em> is doing real work in the first line, exactly as it does in
+            ordinary calculus: the Hessian only ever sees a neighbourhood. The fat-necked soap film
+            below is the case in point. It is a genuine local minimum &mdash; every eigenvalue positive
+            &mdash; but its \(I\) is \(2.94\), while the two flat discs that the
+            <a href="../soap_bubbles/index.html" style="color: var(--accent-blue);">Soap Bubbles</a>
+            page calls the Goldschmidt solution have \(I = R^2 = 2.56\). No second-order test can see
+            that, here or anywhere.</p>
 
         <h3>The Hessian is tridiagonal</h3>
         <p>\(y_j\) appears in only two terms of the sum, the segments on either side of it, so
