@@ -311,10 +311,24 @@
         <h1>Is It a Minimum?</h1>
 
         <p>Solving the Euler&ndash;Lagrange equation gives a <strong>stationary</strong> curve, and
-            that is all it gives. In ordinary calculus \(f'(x)=0\) does not make \(x\) a minimum
-            &mdash; it could be a maximum or a point of inflection &mdash; and the same is true here.
-            The <a href="../euler_lagrange/index.html" style="color: var(--accent-blue);">first
+            that is all it gives. Stationary has a precise meaning here: for <em>every</em> variation
+            \(\eta\) vanishing at both endpoints,</p>
+
+        <div class="eq">
+            \[ \left.\frac{d}{d\varepsilon} I[y+\varepsilon\eta]\right|_{\varepsilon=0} = 0 . \]
+        </div>
+
+        <p>Every directional derivative vanishes &mdash; which is precisely what \(f'(x)=0\) says, one
+            direction at a time. And precisely as in ordinary calculus, that does not make it a minimum:
+            it could be a maximum, or the analogue of a point of inflection. The
+            <a href="../euler_lagrange/index.html" style="color: var(--accent-blue);">first
             variation</a> is a necessary condition, not a sufficient one.</p>
+
+        <p class="note">The condition that \(\eta\) vanish at the endpoints is not a technicality: it
+            says what the curve is being compared <em>with</em>. Integrating by parts leaves
+            \(\delta I = [F_{y'}\eta]_a^b + \int(F_y - \tfrac{d}{dx}F_{y'})\eta\,dx\), and it is the
+            pinned endpoints that kill the first piece. Let \(\eta\) move the ends and the same
+            catenary is no longer stationary.</p>
 
         <p>So how do you tell? In one variable you look at \(f''(x)\). This page does exactly that,
             and needs nothing beyond it.</p>
