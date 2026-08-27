@@ -141,18 +141,6 @@
             cursor: pointer;
         }
 
-        .stat-box {
-            background: rgba(0, 0, 0, 0.4);
-            padding: 15px;
-            border-radius: 8px;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            font-family: 'Courier New', monospace;
-            font-size: 1.1rem;
-            color: var(--accent-green);
-            margin-top: 15px;
-            text-align: center;
-            font-weight: bold;
-        }
 
         .solution-list {
             list-style: none;
@@ -241,12 +229,32 @@
             }
             #plot-container { height: 88vh; }
         }
+
+        .readout {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            padding: 9px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+            font-size: 1rem;
+            gap: 10px;
+        }
+
+        .readout:last-child { border-bottom: none; }
+        .readout .k { color: var(--text-muted); }
+        .readout .v {
+            font-family: 'Courier New', monospace;
+            font-weight: bold;
+            font-size: 1.1rem;
+            color: var(--text-main);
+            white-space: nowrap;
+        }
     </style>
 </head>
 
 <body>
     <div id="sidebar">
-        <a href="../index.html" class="back-link">&larr; Back to CoV Home</a>
+        <a href="../index.html" class="back-link">&larr; Calculus of Variations</a>
         <h1>Soap Bubbles</h1>
 
         <div class="eq">
@@ -279,10 +287,8 @@
                 <span class="marker" style="left: 100%;">5.0</span>
             </div>
 
-            <div style="margin-top: 15px;">
-                <label style="margin-bottom: 5px;">Number of Catenoid Solutions:</label>
-                <div class="stat-box" id="num-solutions">0</div>
-            </div>
+            <div class="readout" style="margin-top: 15px;"><span class="k">Catenoid solutions</span>
+                <span class="v" id="num-solutions">0</span></div>
 
             <ul class="solution-list" id="solution-list">
                 <!-- Solutions injected via JS -->
