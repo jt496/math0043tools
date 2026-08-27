@@ -1,0 +1,841 @@
+<!DOCTYPE html>
+<!--
+    Copyright (c) 2026 John Talbot
+
+    Authored by John Talbot, with substantial assistance from Anthropic's
+    Claude and Google's Gemini. See the NOTICE file for details.
+
+    Licensed under the Apache License, Version 2.0 (the "License");
+    you may not use this file except in compliance with the License.
+    You may obtain a copy of the License at
+
+            http://www.apache.org/licenses/LICENSE-2.0
+
+    Unless required by applicable law or agreed to in writing, software
+    distributed under the License is distributed on an "AS IS" BASIS,
+    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+    See the License for the specific language governing permissions and
+    limitations under the License.
+-->
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Is It a Minimum?</title>
+    <meta name="description"
+        content="A stationary curve need not be a minimum. Apply the ordinary second-derivative test to the discretised functional and read the answer off the Hessian's eigenvalues." />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js" async></script>
+    <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+    <style>
+        :root {
+            color-scheme: dark;
+            --primary: #eebb22;
+            --primary-hover: #ffcc33;
+            --bg-dark: #0f1115;
+            --panel-bg: rgba(20, 24, 30, 0.95);
+            --text-main: #e2e8f0;
+            --text-muted: #94a3b8;
+            --accent-red: #ff5555;
+            --accent-green: #4ade80;
+            --accent-blue: #60a5fa;
+            --accent-purple: #a855f7;
+            --border: rgba(255, 255, 255, 0.1);
+        }
+
+        body {
+            margin: 0;
+            background-color: var(--bg-dark);
+            color: var(--text-main);
+            font-family: 'Inter', sans-serif;
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        #sidebar, #controls {
+            flex-shrink: 0;
+            background: var(--panel-bg);
+            z-index: 10;
+            overflow-y: auto;
+        }
+
+        #sidebar {
+            width: 400px;
+            padding: 30px;
+            box-shadow: 4px 0 20px rgba(0, 0, 0, 0.6);
+            border-right: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        #controls {
+            width: 330px;
+            padding: 24px 22px;
+            box-shadow: -4px 0 20px rgba(0, 0, 0, 0.6);
+            border-left: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        #controls .control-group:first-child { margin-top: 0; }
+
+        #sidebar::-webkit-scrollbar, #controls::-webkit-scrollbar { width: 8px; }
+        #sidebar::-webkit-scrollbar-thumb, #controls::-webkit-scrollbar-thumb {
+            background-color: rgba(255, 255, 255, 0.2);
+            border-radius: 4px;
+        }
+
+        #plot-container {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            background-color: var(--bg-dark);
+            height: 100vh;
+            min-width: 0;
+        }
+
+        #curve-plot { width: 100%; min-height: 0; flex: 3;
+                      border-bottom: 1px solid rgba(255, 255, 255, 0.05); }
+        /* The two halves of the second-derivative test: the whole spectrum,
+           and the slice of I_N along the direction that matters. */
+        #bottom-row { flex: 2; display: flex; min-height: 0; }
+        #spec-plot, #eps-plot { flex: 1; min-width: 0; min-height: 0; }
+        #spec-plot { border-right: 1px solid rgba(255, 255, 255, 0.05); }
+
+        @media (max-width: 900px) {
+            #bottom-row { flex-direction: column; }
+            #spec-plot {
+                border-right: none;
+                border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            }
+        }
+
+        h1 {
+            font-size: 2rem;
+            font-weight: 800;
+            color: var(--primary);
+            margin: 0 0 20px 0;
+            letter-spacing: -0.5px;
+        }
+
+        h3 {
+            font-size: 1.15rem;
+            color: var(--text-main);
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 8px;
+            margin-top: 30px;
+        }
+
+        p, li {
+            font-size: 1.02rem;
+            line-height: 1.6;
+            color: var(--text-main);
+            margin-bottom: 14px;
+        }
+
+        .control-group {
+            margin-top: 22px;
+            background: rgba(0, 0, 0, 0.3);
+            padding: 20px;
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        .control-group label {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+            color: var(--text-muted);
+            font-weight: 600;
+            font-size: 1rem;
+            align-items: center;
+        }
+
+        select {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 18px;
+            /* Opaque, not rgba(): the popup list composites against the
+               browser's own background, not the panel behind it. */
+            background: #171b22;
+            color: var(--text-main);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            font-family: inherit;
+            font-size: 0.98rem;
+            cursor: pointer;
+        }
+
+        select option { background: #171b22; color: var(--text-main); }
+        select option:checked { background: #2a313d; }
+        select:focus { outline: 2px solid var(--primary); }
+        select:last-child { margin-bottom: 0; }
+
+        input[type=range] {
+            width: 100%;
+            accent-color: var(--primary);
+            height: 8px;
+            border-radius: 4px;
+            outline: none;
+            margin-bottom: 6px;
+            cursor: pointer;
+        }
+
+        .readout {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            padding: 9px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+            font-size: 1rem;
+            gap: 10px;
+        }
+
+        .readout:last-child { border-bottom: none; }
+        .readout .k { color: var(--text-muted); }
+        .readout .v {
+            font-family: 'Courier New', monospace;
+            font-weight: bold;
+            font-size: 1.1rem;
+            color: var(--text-main);
+            white-space: nowrap;
+        }
+
+        .btn {
+            flex: 1;
+            padding: 10px 6px;
+            background: rgba(255, 255, 255, 0.06);
+            color: var(--text-main);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            font-family: inherit;
+            font-size: 0.98rem;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .btn:hover { background: rgba(255, 255, 255, 0.12); }
+
+        .verdict {
+            margin-top: 16px;
+            padding: 14px;
+            border-radius: 8px;
+            font-size: 1rem;
+            line-height: 1.5;
+            border-left: 4px solid var(--text-muted);
+            background: rgba(255, 255, 255, 0.04);
+        }
+
+        .verdict.good { border-left-color: var(--accent-green); background: rgba(74, 222, 128, 0.08); }
+        .verdict.bad { border-left-color: var(--accent-red); background: rgba(255, 85, 85, 0.08); }
+        .verdict strong { color: var(--text-main); }
+
+        .back-link {
+            display: inline-block;
+            margin-bottom: 20px;
+            color: var(--accent-blue);
+            text-decoration: none;
+            font-weight: 600;
+        }
+
+        .back-link:hover { text-decoration: underline; }
+
+        .note {
+            font-size: 0.92rem;
+            color: var(--text-muted);
+            line-height: 1.55;
+        }
+
+        .eq {
+            background: rgba(0, 0, 0, 0.35);
+            border-radius: 8px;
+            padding: 14px;
+            margin: 14px 0;
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            /* A wide equation scrolls sideways rather than widening the panel. */
+            overflow-x: auto;
+        }
+
+        .eq mjx-container[display] { margin: 0 !important; }
+
+        @media (max-width: 1250px) {
+            body { flex-wrap: wrap; height: auto; overflow: auto; }
+            #plot-container { height: 88vh; order: 1; flex: 1 1 460px; }
+            #controls { order: 2; height: 88vh; }
+            #sidebar {
+                order: 3; width: auto; flex: 1 1 100%; height: auto;
+                border-right: none; border-top: 1px solid rgba(255, 255, 255, 0.05);
+                box-shadow: none;
+            }
+        }
+
+        @media (max-width: 780px) {
+            body { flex-direction: column; }
+            #plot-container { height: 80vh; }
+            #controls { width: auto; height: auto; border-left: none; box-shadow: none; }
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Left: the argument. Middle: the curve, the spectrum, and the slice of
+         I_N along the worst direction. Right: everything you touch. -->
+    <div id="sidebar">
+        <a href="../index.html" class="back-link">&larr; Calculus of Variations</a>
+        <h1>Is It a Minimum?</h1>
+
+        <p>Solving the Euler&ndash;Lagrange equation gives a <strong>stationary</strong> curve, and
+            that is all it gives. In ordinary calculus \(f'(x)=0\) does not make \(x\) a minimum
+            &mdash; it could be a maximum or a point of inflection &mdash; and the same is true here.
+            The <a href="../euler_lagrange/index.html" style="color: var(--accent-blue);">first
+            variation</a> is a necessary condition, not a sufficient one.</p>
+
+        <p>So how do you tell? In one variable you look at \(f''(x)\). This page does exactly that,
+            and needs nothing beyond it.</p>
+
+        <h3>The test you already know</h3>
+        <p>Discretise as on the
+            <a href="../direct_method/index.html" style="color: var(--accent-blue);">direct method</a>
+            page: an \(N\)-node polyline turns \(I[y]\) into an ordinary function \(I_N\) of the
+            \(N-1\) interior heights. A stationary curve is a point where \(\nabla I_N = 0\), and for a
+            function of several variables the second-derivative test is the one from multivariable
+            calculus &mdash; look at the matrix of second partials, the <strong>Hessian</strong>:</p>
+
+        <div class="eq">
+            \[ H_{ij} \;=\; \frac{\partial^2 I_N}{\partial y_i\,\partial y_j}. \]
+        </div>
+
+        <p>\(H\) is symmetric, so it has real eigenvalues, and the rule is the familiar one:</p>
+
+        <ul>
+            <li>every eigenvalue \(>0\) &mdash; a <strong>minimum</strong>;</li>
+            <li>some eigenvalue \(<0\) &mdash; <strong>not</strong> a minimum;</li>
+            <li>an eigenvalue at \(0\) &mdash; the test is inconclusive, as ever.</li>
+        </ul>
+
+        <h3>The Hessian is tridiagonal</h3>
+        <p>\(y_j\) appears in only two terms of the sum, the segments on either side of it, so
+            \(\partial^2 I_N/\partial y_i\partial y_j\) is zero unless \(i\) and \(j\) are neighbours.
+            \(H\) is therefore <em>tridiagonal</em>, and its whole spectrum is cheap to compute
+            however large \(N\) is. That is the lower-left plot.</p>
+
+        <h3>What a negative eigenvalue is</h3>
+        <p>Here is the point of the page. An eigenvalue \(\kappa<0\) comes with an eigenvector \(v\),
+            and for that direction</p>
+
+        <div class="eq">
+            \[ I_N(y+\varepsilon v) \;=\; I_N(y) \;+\; \tfrac12\,\kappa\,\varepsilon^2 \;+\; \dots \]
+        </div>
+
+        <p>with no first-order term, because the curve is stationary. So moving along \(v\) makes
+            \(I_N\) <em>smaller</em>, and the curve cannot be a minimum. That eigenvector is not an
+            abstraction: it is drawn on the upper plot, and the \(\varepsilon\) slider moves the curve
+            along it. The lower-right panel plots \(I_N\) as you do so &mdash; a parabola opening
+            upwards at a minimum, downwards when the test fails.</p>
+
+        <p class="note">The eigenvector is exactly the perturbation \(\eta\) that the
+            Euler&ndash;Lagrange page invites you to try by hand. There, you pick \(\eta\) and see what
+            it does to \(I\). Here, the Hessian hands you the <em>worst</em> \(\eta\) there is, without
+            your having to guess.</p>
+
+        <h3>This problem</h3>
+        <p id="prob-note">&mdash;</p>
+
+        <h3>What this is called</h3>
+        <p class="note">Classically all of this travels under <em>the second variation</em>, and the
+            moment an eigenvalue crosses zero is a <em>conjugate point</em>, governed by the Jacobi
+            condition. None of that machinery is needed above: once the functional is an ordinary
+            function of finitely many variables, the ordinary second-derivative test answers the
+            question, and the classical statements are what it becomes as \(N\to\infty\).</p>
+
+        <h3>Where this sits</h3>
+        <p class="note">The <a href="../euler_lagrange/index.html" style="color: var(--accent-blue);">first
+            variation</a> page tests one direction at a time and asks whether \(I\) is stationary; the
+            <a href="../direct_method/index.html" style="color: var(--accent-blue);">direct method</a>
+            finds a stationary curve by descending; this page asks what kind of stationary point it is.
+            Together they are the first- and second-derivative tests, in \(N-1\) variables.</p>
+    </div>
+
+    <div id="plot-container">
+        <div id="curve-plot"></div>
+        <div id="bottom-row">
+            <div id="spec-plot"></div>
+            <div id="eps-plot"></div>
+        </div>
+    </div>
+
+    <div id="controls">
+        <div class="control-group">
+            <label for="problem-select"><span>Problem</span></label>
+            <select id="problem-select"></select>
+        </div>
+
+        <div class="control-group">
+            <div id="param-wrap">
+                <label for="param-slider">
+                    <span id="param-label">Parameter</span>
+                    <span id="param-display" style="color: var(--primary); font-size: 1.2rem;">&mdash;</span>
+                </label>
+                <input type="range" id="param-slider" min="0" max="1" step="0.01" value="0.5">
+            </div>
+
+            <label for="eps-slider" style="margin-top: 14px;">
+                <span>Perturbation \(\varepsilon\)</span>
+                <span id="eps-display" style="color: var(--primary); font-size: 1.2rem;">0.00</span>
+            </label>
+            <input type="range" id="eps-slider" min="-1" max="1" step="0.005" value="0">
+
+            <label for="n-slider" style="margin-top: 14px;">
+                <span>Nodes \(N\)</span>
+                <span id="n-display" style="color: var(--primary); font-size: 1.2rem;">60</span>
+            </label>
+            <input type="range" id="n-slider" min="8" max="120" step="1" value="60">
+
+            <div style="display: flex; gap: 8px; margin-top: 16px;">
+                <button id="btn-zero" class="btn" title="Put the curve back on the stationary solution">&epsilon; = 0</button>
+            </div>
+        </div>
+
+        <div class="control-group">
+            <label><span>The second-derivative test</span></label>
+            <div class="readout"><span class="k">lowest eigenvalue \(\kappa_1\)</span>
+                <span class="v" id="out-k1">&mdash;</span></div>
+            <div class="readout"><span class="k">negative eigenvalues</span>
+                <span class="v" id="out-nneg">&mdash;</span></div>
+            <div class="readout"><span class="k">\(\max_j |h^{-1}\partial I_N/\partial y_j|\)</span>
+                <span class="v" id="out-resid">&mdash;</span></div>
+            <div id="verdict" class="verdict">&mdash;</div>
+        </div>
+
+        <div class="control-group">
+            <label><span>Moving along \(v\)</span></label>
+            <div class="readout"><span class="k">\(I_N\) at \(\varepsilon=0\)</span>
+                <span class="v" id="out-i0">&mdash;</span></div>
+            <div class="readout"><span class="k">\(I_N\) at this \(\varepsilon\)</span>
+                <span class="v" id="out-ie">&mdash;</span></div>
+            <div class="readout"><span class="k">change</span>
+                <span class="v" id="out-di">&mdash;</span></div>
+        </div>
+    </div>
+
+    <script>
+        const $ = id => document.getElementById(id);
+
+        // f is monotone on [lo,hi] with a sign change; 200 halvings is exact to rounding.
+        function bisect(f, lo, hi) {
+            for (let i = 0; i < 200; i++) {
+                const m = 0.5 * (lo + hi);
+                if (f(lo) * f(m) <= 0) hi = m; else lo = m;
+            }
+            return 0.5 * (lo + hi);
+        }
+
+        // ── The soap film's two catenoids ───────────────────────────────────
+        // cosh(mu)/mu = R has two roots either side of the minimum at
+        // mu0 ~ 1.19968. The smaller root is the fat-necked film, the larger
+        // the thin-necked one -- and this page is about what separates them.
+        const SOAP_R = 1.6, SOAP_MU0 = 1.19968;
+        const MU_SHALLOW = bisect(m => Math.cosh(m) / m - SOAP_R, 1e-9, SOAP_MU0);
+        const MU_DEEP    = bisect(m => Math.cosh(m) / m - SOAP_R, SOAP_MU0, 20);
+
+        // ── Discrete functional and its derivatives ─────────────────────────
+        // Midpoint rule on each segment, exactly as on the direct method page.
+        function integrate(P, y, h) {
+            let s = 0;
+            for (let k = 0; k < y.length - 1; k++) {
+                const p = (y[k + 1] - y[k]) / h;
+                s += P.F(P.a + (k + 0.5) * h, 0.5 * (y[k] + y[k + 1]), p);
+            }
+            return s * h;
+        }
+
+        function gradInto(P, y, h, g) {
+            const N = y.length - 1;
+            g.fill(0);
+            for (let k = 0; k < N; k++) {
+                const p = (y[k + 1] - y[k]) / h;
+                const xm = P.a + (k + 0.5) * h, ym = 0.5 * (y[k] + y[k + 1]);
+                const fy = P.Fy(xm, ym, p), fp = P.Fp(xm, ym, p);
+                g[k]     += 0.5 * h * fy - fp;
+                g[k + 1] += 0.5 * h * fy + fp;
+            }
+            g[0] = 0; g[N] = 0;
+            return g;
+        }
+
+        /**
+         * The tridiagonal Hessian, by three-colour finite differencing of the
+         * gradient: perturb every third interior node at once and every band
+         * entry falls out, so six gradient evaluations suffice whatever N is.
+         * Returns diagonal d[0..n-1] and off-diagonal off[0..n-2], n = N-1.
+         */
+        function hessian(P, y, h, N) {
+            const e = 1e-5, n = N - 1;
+            const d = new Float64Array(n), off = new Float64Array(Math.max(0, n - 1));
+            const gp = new Float64Array(N + 1), gm = new Float64Array(N + 1);
+            const t = new Float64Array(N + 1);
+            for (let c = 0; c < 3; c++) {
+                t.set(y); for (let j = 1; j < N; j++) if (j % 3 === c) t[j] += e;
+                gradInto(P, t, h, gp);
+                t.set(y); for (let j = 1; j < N; j++) if (j % 3 === c) t[j] -= e;
+                gradInto(P, t, h, gm);
+                for (let j = 1; j < N; j++) {
+                    const col = (gp[j] - gm[j]) / (2 * e);
+                    if (j % 3 === c) d[j - 1] = col;
+                    else if ((j - 1) % 3 === c && j > 1) off[j - 2] = col;
+                }
+            }
+            return { d, off, n };
+        }
+
+        // Sturm sequence: how many eigenvalues lie below x. The count of
+        // negative pivots in H - xI, which for a symmetric tridiagonal matrix
+        // is exact and needs no factorisation.
+        function countBelow(H, x) {
+            let q = H.d[0] - x, c = q < 0 ? 1 : 0;
+            for (let i = 1; i < H.n; i++) {
+                if (q === 0) q = 1e-300;
+                q = H.d[i] - x - H.off[i - 1] * H.off[i - 1] / q;
+                if (q < 0) c++;
+            }
+            return c;
+        }
+
+        function gershgorin(H) {
+            let lo = 0, hi = 0;
+            for (let i = 0; i < H.n; i++) {
+                const r = Math.abs(H.d[i])
+                        + (i > 0 ? Math.abs(H.off[i - 1]) : 0)
+                        + (i < H.n - 1 ? Math.abs(H.off[i]) : 0);
+                lo = Math.min(lo, H.d[i] - r);
+                hi = Math.max(hi, H.d[i] + r);
+            }
+            return [lo, hi];
+        }
+
+        // The lowest `howMany` eigenvalues, each by bisection on the count.
+        function lowestEigenvalues(H, howMany) {
+            const [lo0, hi0] = gershgorin(H);
+            const out = [];
+            for (let k = 1; k <= Math.min(howMany, H.n); k++) {
+                let a = lo0, b = hi0;
+                for (let it = 0; it < 120; it++) {
+                    const m = 0.5 * (a + b);
+                    if (countBelow(H, m) >= k) b = m; else a = m;
+                }
+                out.push(0.5 * (a + b));
+            }
+            return out;
+        }
+
+        // Eigenvector by inverse iteration: solve (H - mu I)x = v repeatedly,
+        // with the Thomas algorithm, and x swings onto the eigenvector.
+        function eigenvector(H, mu) {
+            const n = H.n;
+            const a = new Float64Array(n), b = new Float64Array(n), c = new Float64Array(n);
+            for (let i = 0; i < n; i++) {
+                a[i] = H.d[i] - mu - 1e-9;
+                if (i < n - 1) b[i] = H.off[i];
+                if (i > 0) c[i] = H.off[i - 1];
+            }
+            let v = new Float64Array(n).fill(1 / Math.sqrt(n));
+            for (let it = 0; it < 50; it++) {
+                const cp = new Float64Array(n), dp = new Float64Array(n);
+                cp[0] = b[0] / a[0]; dp[0] = v[0] / a[0];
+                for (let i = 1; i < n; i++) {
+                    const m = a[i] - c[i] * cp[i - 1];
+                    cp[i] = (i < n - 1 ? b[i] : 0) / m;
+                    dp[i] = (v[i] - c[i] * dp[i - 1]) / m;
+                }
+                const x = new Float64Array(n);
+                x[n - 1] = dp[n - 1];
+                for (let i = n - 2; i >= 0; i--) x[i] = dp[i] - cp[i] * x[i + 1];
+                let nn = 0;
+                for (let i = 0; i < n; i++) nn += x[i] * x[i];
+                nn = Math.sqrt(nn);
+                if (!(nn > 0) || !isFinite(nn)) break;
+                for (let i = 0; i < n; i++) x[i] /= nn;
+                v = x;
+            }
+            // Normalise to unit maximum and fix the sign, so epsilon means the
+            // same visible displacement whatever N is.
+            let m = 0, im = 0;
+            for (let i = 0; i < n; i++) if (Math.abs(v[i]) > m) { m = Math.abs(v[i]); im = i; }
+            if (m > 0) {
+                const sg = Math.sign(v[im]) || 1;
+                for (let i = 0; i < n; i++) v[i] = sg * v[i] / m;
+            }
+            return v;
+        }
+
+        // ── The problems ────────────────────────────────────────────────────
+        // Each supplies F and its partials, the boundary values, and a curve
+        // that is stationary for the continuum problem.
+        const PROBLEMS = [
+            {
+                id: 'shortest',
+                label: 'Shortest path:  ∫₀¹ √(1+(y′)²) dx',
+                a: 0, b: 1, ya: 0, yb: 1,
+                F:  (x, y, p) => Math.sqrt(1 + p * p),
+                Fy: () => 0,
+                Fp: (x, y, p) => p / Math.sqrt(1 + p * p),
+                exact: x => x,
+                epsMax: 0.5,
+                note: 'The straight line, and the test says what you would expect: every eigenvalue is ' +
+                      'positive, so it really is a minimum and not merely stationary. Push \\(\\varepsilon\\) ' +
+                      'either way and the length goes up. Worth doing once, so that the failures below ' +
+                      'are not the only thing you have seen.'
+            },
+            {
+                id: 'osc',
+                label: 'Oscillator:  ∫₀¹ ((y′)² − k²y²) dx,  y(0)=y(1)=0',
+                a: 0, b: 1, ya: 0, yb: 0,
+                F:  (x, y, p) => p * p - PARAM * PARAM * y * y,
+                Fy: (x, y, p) => -2 * PARAM * PARAM * y,
+                Fp: (x, y, p) => 2 * p,
+                exact: () => 0,
+                epsMax: 0.6,
+                param: { label: 'stiffness \\(k\\)', min: 1, max: 6, step: 0.01, value: 2.4 },
+                note: 'The flat curve \\(y\\equiv 0\\) is stationary for <em>every</em> \\(k\\) &mdash; it ' +
+                      'solves the Euler&ndash;Lagrange equation \\(y\'\'+k^2y=0\\) with both ends pinned. ' +
+                      'But drag \\(k\\) upwards and watch the lowest eigenvalue slide down through zero at ' +
+                      '\\(k=\\pi\\). Below it the flat curve is a minimum; above it, the same stationary ' +
+                      'curve is not, and the eigenvector that proves it is \\(\\sin\\pi x\\) &mdash; the ' +
+                      'first shape that fits between the endpoints. This is the classical conjugate point, ' +
+                      'arrived at with nothing but the second-derivative test.'
+            },
+            {
+                id: 'soap-shallow',
+                label: 'Soap film, fat neck:  ∫ y√(1+(y′)²) dx',
+                a: -1, b: 1, ya: SOAP_R, yb: SOAP_R,
+                F:  (x, y, p) => y * Math.sqrt(1 + p * p),
+                Fy: (x, y, p) => Math.sqrt(1 + p * p),
+                Fp: (x, y, p) => y * p / Math.sqrt(1 + p * p),
+                exact: x => Math.cosh(MU_SHALLOW * x) / MU_SHALLOW,
+                epsMax: 0.6,
+                note: 'Two catenoids solve \\(\\cosh\\mu/\\mu = R\\), and both satisfy Euler&ndash;Lagrange, ' +
+                      'so the first variation cannot tell them apart. This is the fat-necked one, ' +
+                      '\\(\\mu=' + MU_SHALLOW.toFixed(4) + '\\): all eigenvalues positive, a genuine ' +
+                      'minimum. It is the film the ' +
+                      '<a href="../direct_method/index.html" style="color:var(--accent-blue)">direct method</a> ' +
+                      'page settles on without being told to, and now you can see why.'
+            },
+            {
+                id: 'soap-deep',
+                label: 'Soap film, thin neck:  ∫ y√(1+(y′)²) dx',
+                a: -1, b: 1, ya: SOAP_R, yb: SOAP_R,
+                F:  (x, y, p) => y * Math.sqrt(1 + p * p),
+                Fy: (x, y, p) => Math.sqrt(1 + p * p),
+                Fp: (x, y, p) => y * p / Math.sqrt(1 + p * p),
+                exact: x => Math.cosh(MU_DEEP * x) / MU_DEEP,
+                epsMax: 0.5,
+                note: 'The other root, \\(\\mu=' + MU_DEEP.toFixed(4) + '\\), and the test fails: one ' +
+                      'eigenvalue is negative. Look at its eigenvector on the upper plot &mdash; it is ' +
+                      'one-signed and largest at the middle, so it moves the <strong>whole neck</strong> ' +
+                      'in or out. Either way lowers the area, since \\(I_N\\) changes by ' +
+                      '\\(\\tfrac12\\kappa\\varepsilon^2\\) and \\(\\kappa<0\\) &mdash; which is why the ' +
+                      'parabola on the right falls away on both sides. Pinching inwards is the half you ' +
+                      'see in practice: it is how a real film of this shape breaks. Stationary, and not a ' +
+                      'minimum: the ' +
+                      '<a href="../soap_bubbles/index.html" style="color:var(--accent-blue)">Soap Bubbles</a> ' +
+                      'page calls this the unstable solution.'
+            }
+        ];
+
+        // The oscillator's k is read out of a module-level binding so the
+        // integrand can stay a plain function of (x, y, p) like the others.
+        let PARAM = 2.4;
+
+        // ── State ───────────────────────────────────────────────────────────
+        let problem = PROBLEMS[0];
+        let N = 60, eps = 0, y0 = null, h = 0, vec = null, evs = [], H = null;
+
+        function rebuild() {
+            h = (problem.b - problem.a) / N;
+            y0 = new Float64Array(N + 1);
+            for (let i = 0; i <= N; i++) y0[i] = problem.exact(problem.a + i * h);
+            y0[0] = problem.ya; y0[N] = problem.yb;
+            H = hessian(problem, y0, h, N);
+            evs = lowestEigenvalues(H, Math.min(8, H.n));
+            vec = eigenvector(H, evs[0]);
+        }
+
+        // The curve displaced along the eigenvector; the ends stay pinned
+        // because the eigenvector only ever has interior components.
+        function perturbed(e) {
+            const y = new Float64Array(N + 1);
+            y.set(y0);
+            for (let j = 1; j < N; j++) y[j] = y0[j] + e * vec[j - 1];
+            return y;
+        }
+
+        function residual() {
+            const g = gradInto(problem, y0, h, new Float64Array(N + 1));
+            let m = 0;
+            for (let j = 1; j < N; j++) m = Math.max(m, Math.abs(g[j] / h));
+            return m;
+        }
+
+        // ── Plots ───────────────────────────────────────────────────────────
+        const BASE = {
+            paper_bgcolor: '#0f1115', plot_bgcolor: '#0f1115',
+            font: { color: '#e2e8f0', family: 'Inter, sans-serif', size: 13 },
+            margin: { t: 44, r: 24, b: 48, l: 62 },
+            xaxis: { gridcolor: 'rgba(255,255,255,0.08)', zerolinecolor: 'rgba(255,255,255,0.25)' },
+            yaxis: { gridcolor: 'rgba(255,255,255,0.08)', zerolinecolor: 'rgba(255,255,255,0.25)' },
+            legend: { bgcolor: 'rgba(0,0,0,0.35)', bordercolor: 'rgba(255,255,255,0.1)', borderwidth: 1 }
+        };
+        const CONFIG = { responsive: true, displayModeBar: false };
+        const clone = o => JSON.parse(JSON.stringify(o));
+
+        function draw() {
+            const xs = [];
+            for (let k = 0; k <= N; k++) xs.push(problem.a + k * h);
+            const yp = perturbed(eps);
+
+            // the eigenvector, drawn about the stationary curve so its shape is
+            // legible against the curve it is deforming
+            const vx = [], vy = [];
+            for (let j = 1; j < N; j++) { vx.push(problem.a + j * h); vy.push(vec[j - 1]); }
+
+            const neg = evs[0] < 0;
+            const cl = clone(BASE);
+            cl.title = { text: 'The stationary curve, and the worst direction from it', font: { size: 15 } };
+            cl.xaxis.title = { text: 'x' };
+            cl.yaxis.title = { text: 'y' };
+            Plotly.react('curve-plot', [
+                { x: xs, y: Array.from(y0), mode: 'lines', name: 'stationary curve',
+                  line: { color: '#94a3b8', width: 2, dash: 'dash' } },
+                { x: xs, y: Array.from(yp), mode: 'lines', name: 'y + εv',
+                  line: { color: '#eebb22', width: 2.5 } },
+                { x: vx, y: vy, mode: 'lines', name: 'eigenvector v', yaxis: 'y2',
+                  line: { color: neg ? '#ff5555' : '#4ade80', width: 1.5, dash: 'dot' } },
+                { x: [xs[0], xs[N]], y: [y0[0], y0[N]], mode: 'markers', name: 'pinned ends',
+                  marker: { color: '#4ade80', size: 11 } }
+            ], Object.assign(cl, {
+                yaxis2: { overlaying: 'y', side: 'right', showgrid: false,
+                          range: [-1.15, 1.15], title: { text: 'v' },
+                          tickfont: { color: neg ? '#ff5555' : '#4ade80' },
+                          titlefont: { color: neg ? '#ff5555' : '#4ade80' } }
+            }), CONFIG);
+
+            // the spectrum
+            const sl = clone(BASE);
+            sl.title = { text: 'lowest eigenvalues of H', font: { size: 14 } };
+            sl.xaxis.title = { text: 'index' };
+            sl.showlegend = false;
+            sl.margin = { t: 40, r: 16, b: 46, l: 62 };
+            Plotly.react('spec-plot', [
+                { x: evs.map((_, i) => i + 1), y: evs, type: 'bar',
+                  marker: { color: evs.map(e => e < 0 ? '#ff5555' : '#4ade80') } }
+            ], sl, CONFIG);
+
+            // I_N along the eigenvector
+            const es = [], is = [];
+            const M = problem.epsMax;
+            for (let i = -40; i <= 40; i++) {
+                const e = M * i / 40;
+                es.push(e); is.push(integrate(problem, perturbed(e), h));
+            }
+            const I0 = integrate(problem, y0, h);
+            const Ie = integrate(problem, yp, h);
+            const el = clone(BASE);
+            el.title = { text: 'I\u2099 along v', font: { size: 14 } };
+            el.xaxis.title = { text: 'ε' };
+            el.showlegend = false;
+            el.margin = { t: 40, r: 16, b: 46, l: 62 };
+            Plotly.react('eps-plot', [
+                { x: es, y: is, mode: 'lines', line: { color: '#a855f7', width: 2.5 } },
+                { x: [eps], y: [Ie], mode: 'markers', marker: { color: '#eebb22', size: 11 } }
+            ], el, CONFIG);
+
+            // readouts
+            $('out-k1').textContent = evs[0].toExponential(3);
+            $('out-nneg').textContent = String(evs.filter(e => e < 0).length) +
+                (evs.filter(e => e < 0).length === evs.length ? '+' : '');
+            $('out-resid').textContent = residual().toExponential(2);
+            $('out-i0').textContent = I0.toFixed(6);
+            $('out-ie').textContent = Ie.toFixed(6);
+            const d = Ie - I0;
+            $('out-di').textContent = (d >= 0 ? '+' : '') + d.toExponential(2);
+
+            const v = $('verdict');
+            if (evs[0] > 0) {
+                v.className = 'verdict good';
+                v.innerHTML = '<strong>A minimum.</strong> Every eigenvalue is positive, so \\(I_N\\) ' +
+                    'rises in every direction from here. The parabola on the right opens upwards.';
+            } else {
+                v.className = 'verdict bad';
+                v.innerHTML = '<strong>Not a minimum.</strong> The Hessian has a negative eigenvalue, so ' +
+                    'moving along \\(v\\) <em>lowers</em> \\(I_N\\) &mdash; stationary, but beaten by a ' +
+                    'curve right next to it. The parabola on the right opens downwards.';
+            }
+            if (window.MathJax && MathJax.typesetPromise) {
+                MathJax.typesetPromise([v]).catch(() => {});
+            }
+        }
+
+        // ── Wiring ──────────────────────────────────────────────────────────
+        function syncEpsSlider() {
+            const s = $('eps-slider');
+            s.min = String(-problem.epsMax); s.max = String(problem.epsMax);
+            s.step = String(problem.epsMax / 100);
+            s.value = String(eps);
+            $('eps-display').textContent = eps.toFixed(2);
+        }
+
+        function loadProblem() {
+            problem = PROBLEMS[parseInt($('problem-select').value, 10)];
+            eps = 0;
+            if (problem.param) {
+                PARAM = problem.param.value;
+                const s = $('param-slider');
+                s.min = String(problem.param.min); s.max = String(problem.param.max);
+                s.step = String(problem.param.step); s.value = String(PARAM);
+                $('param-label').innerHTML = problem.param.label;
+                $('param-display').textContent = PARAM.toFixed(2);
+                $('param-wrap').style.display = '';
+            } else {
+                $('param-wrap').style.display = 'none';
+            }
+            $('prob-note').innerHTML = problem.note;
+            syncEpsSlider();
+            rebuild();
+            draw();
+            if (window.MathJax && MathJax.typesetPromise) {
+                MathJax.typesetPromise([$('controls'), $('prob-note')]).catch(() => {});
+            }
+        }
+
+        PROBLEMS.forEach((p, i) => {
+            const o = document.createElement('option');
+            o.value = String(i); o.textContent = p.label;
+            $('problem-select').appendChild(o);
+        });
+
+        $('problem-select').addEventListener('change', loadProblem);
+        $('param-slider').addEventListener('input', e => {
+            PARAM = parseFloat(e.target.value);
+            $('param-display').textContent = PARAM.toFixed(2);
+            eps = 0; syncEpsSlider();
+            rebuild(); draw();
+        });
+        $('eps-slider').addEventListener('input', e => {
+            eps = parseFloat(e.target.value);
+            $('eps-display').textContent = eps.toFixed(2);
+            draw();
+        });
+        $('n-slider').addEventListener('input', e => {
+            N = parseInt(e.target.value, 10);
+            $('n-display').textContent = String(N);
+            eps = 0; syncEpsSlider();
+            rebuild(); draw();
+        });
+        $('btn-zero').addEventListener('click', () => {
+            eps = 0; syncEpsSlider(); draw();
+        });
+
+        $('problem-select').value = '0';
+        loadProblem();
+    </script>
+</body>
+
+</html>
