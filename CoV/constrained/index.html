@@ -92,11 +92,21 @@
             min-width: 0;
         }
 
-        #curve-plot, #lam-plot { width: 100%; min-height: 0; }
-        /* The curve is the point of the page; the multiplier history is a
-           supporting readout, so it gets the smaller share. */
-        #curve-plot { flex: 3; border-bottom: 1px solid rgba(255, 255, 255, 0.05); }
-        #lam-plot { flex: 2; }
+        #curve-plot { width: 100%; min-height: 0; flex: 3;
+                      border-bottom: 1px solid rgba(255, 255, 255, 0.05); }
+        /* Beneath the curve, the two things being driven to their targets: the
+           gap between the gradients, and the multiplier itself. */
+        #bottom-row { flex: 2; display: flex; min-height: 0; }
+        #resid-plot, #lam-plot { flex: 1; min-width: 0; min-height: 0; }
+        #resid-plot { border-right: 1px solid rgba(255, 255, 255, 0.05); }
+
+        @media (max-width: 900px) {
+            #bottom-row { flex-direction: column; }
+            #resid-plot {
+                border-right: none;
+                border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            }
+        }
 
         h1 {
             font-size: 2rem;
@@ -321,37 +331,77 @@
             energy is free to edge back up whenever the constraint hauls the chain in. It is the
             constraint, not the energy, that decides how far the chain can drop.</p>
 
-        <h3>The multiplier</h3>
-        <p>The trick is the one from the
+        <h3>Both integrals become ordinary functions</h3>
+        <p>Exactly as on the direct method page, replace the curve by an \(N\)-node polyline and
+            estimate each integral by the midpoint rule on each segment. Note that <em>both</em>
+            integrals get the same treatment, and both come out as ordinary functions of the same
+            \(N-1\) heights:</p>
+
+        <div class="eq">
+            \[ I_N(y_1,\dots,y_{N-1}), \qquad J_N(y_1,\dots,y_{N-1}). \]
+        </div>
+
+        <p>The problem is now entirely finite: <strong>minimise \(I_N\) subject to
+            \(J_N=c\)</strong>, over \(N-1\) real numbers. No functionals, no curves &mdash; a
+            function of many variables with one equation of constraint.</p>
+
+        <h3>Which is a problem you have already solved</h3>
+        <p>That is exactly the situation on the
             <a href="../lagrange/index.html" style="color: var(--accent-blue);">Lagrange multipliers</a>
-            page, moved from functions to functionals. There, a constrained stationary point of \(f\)
-            on \(g=\)const satisfies \(\nabla f=\lambda\nabla g\). Here, a constrained stationary point
-            of \(I\) on \(J=\)const satisfies the Euler&ndash;Lagrange equation not of \(I\), but of
-            the combination</p>
+            page: minimise \(f\) subject to \(g=\)const. The answer there is that at a constrained
+            minimum the two gradients must be parallel, \(\nabla f = \lambda \nabla g\) &mdash; if
+            they were not, you could slide along the constraint surface and do better. Nothing in that
+            argument cares how many variables there are, so here it reads</p>
 
         <div class="eq">
-            \[ K[y] \;=\; I[y] - \lambda\,J[y]. \]
+            \[ \nabla I_N \;=\; \lambda\, \nabla J_N , \]
         </div>
 
-        <p>Writing \(F\) for the integrand of \(I\) and \(G\) for the integrand of \(J\), so that
-            \(K\) has integrand \(F-\lambda G\), that equation is the ordinary
-            Euler&ndash;Lagrange equation applied to \(K\):</p>
+        <p>or, one component at a time, at each interior node \(j\),</p>
 
         <div class="eq">
-            \[ \frac{\partial (F-\lambda G)}{\partial y}
-               = \frac{d}{dx}\frac{\partial (F-\lambda G)}{\partial y'} . \]
+            \[ \frac{\partial I_N}{\partial y_j}
+               \;=\; \lambda\,\frac{\partial J_N}{\partial y_j}. \]
         </div>
 
-        <p>The number \(\lambda\) is not given to you. It is fixed by the requirement that the solution
-            actually meets the constraint, and finding it is part of solving the problem. That is what
-            makes constrained problems harder than the unconstrained ones &mdash; and it is what this
-            page shows happening.</p>
+        <h3>Where constrained Euler&ndash;Lagrange comes from</h3>
+        <p>Here is the point of the page. Divide both sides by \(h\). The direct method page worked out
+            what that does to a sum of this kind: only the two segments containing \(y_j\) involve it,
+            and differentiating them gives</p>
 
-        <h3>What the page does</h3>
-        <p>Exactly as on the direct method page, the curve becomes an \(N\)-node polyline and both
-            integrals become ordinary functions of the heights \(y_1,\dots,y_{N-1}\), by the midpoint
-            rule on each segment. Write \(I_N\) and \(J_N\) for those. The problem is now finite:
-            minimise \(I_N\) over the heights subject to \(J_N=c\).</p>
+        <div class="eq">
+            \[ \frac1h\frac{\partial I_N}{\partial y_j}
+               = F_y - \frac{d}{dx}\big(F_{y'}\big) + O(h). \]
+        </div>
+
+        <p>\(J_N\) is a sum of exactly the same shape, built from its own integrand \(G\), so the
+            identical argument applies to it word for word. The parallel-gradient condition therefore
+            becomes, as \(N\to\infty\),</p>
+
+        <div class="eq">
+            \[ F_y - \frac{d}{dx}F_{y'}
+               \;=\; \lambda\Big(G_y - \frac{d}{dx}G_{y'}\Big), \]
+        </div>
+
+        <p>and that is the Euler&ndash;Lagrange equation of \(K = I - \lambda J\), whose integrand is
+            \(F - \lambda G\).</p>
+
+        <p><strong>So the multiplier rule for functionals was never a separate principle.</strong> It is
+            the ordinary \(\nabla f = \lambda\nabla g\) you already know, applied in
+            \(\mathbb{R}^{N-1}\), in the limit. Constrained Euler&ndash;Lagrange stands to Lagrange
+            multipliers exactly as Euler&ndash;Lagrange stands to the first-derivative test.</p>
+
+        <p class="note">That is what the lower-left plot shows. The residual at node \(j\) is
+            \(h^{-1}\big(\partial I_N/\partial y_j - \lambda\,\partial J_N/\partial y_j\big)\)
+            &mdash; the gap between the two gradients, one node at a time, and the panel reports its
+            largest value. Watch it flatten onto zero: when it does, the gradients really are parallel.
+            When it reaches zero <em>and</em> \(J_N=c\), both halves of the problem are solved at once.</p>
+
+        <h3>Finding \(\lambda\)</h3>
+        <p>One thing is still missing. Parallel gradients pin down the <em>shape</em> of the answer, but
+            not the number \(\lambda\) itself: that is fixed only by the requirement that
+            \(J_N=c\) actually holds. So \(\lambda\) has to be found alongside the curve, and the
+            rest of this panel is how.</p>
 
         <p>If \(\lambda\) were known there would be nothing left to do &mdash; descend
             \(K_N=I_N-\lambda J_N\) and stop. It is not known, and that is the whole difficulty.
@@ -419,18 +469,6 @@
         <h3>\(\lambda\) is not just a number</h3>
         <p id="lam-meaning">&mdash;</p>
 
-        <h3>The residual</h3>
-        <p>The panel reports</p>
-
-        <div class="eq">
-            \[ \max_j \left| \frac1h \frac{\partial K_N}{\partial y_j} \right| ,
-               \qquad K_N = I_N - \lambda J_N , \]
-        </div>
-
-        <p>which by the same two-segment argument as on the direct method page is the constrained
-            Euler&ndash;Lagrange expression above, up to \(O(h)\). When it reaches zero <em>and</em>
-            \(J_N=c\), both halves of the problem are solved at once.</p>
-
         <h3>Why \(I_N\) does not equal \(I\)</h3>
         <p class="note">As on the direct method page, a polyline with \(N\) nodes is not the exact
             curve, so the converged values differ from the analytic ones in the fourth decimal or so
@@ -444,7 +482,8 @@
             finds the stationary curve by descending; this page does the same when the curve is not free
             to be anything it likes. The
             <a href="../lagrange/index.html" style="color: var(--accent-blue);">Lagrange multipliers</a>
-            page is the finite-dimensional version of precisely this \(\lambda\), and
+            page is not an analogy but the thing itself &mdash; its
+            \(\nabla f=\lambda\nabla g\) is what this page discretises &mdash; and
             <a href="../dido/index.html" style="color: var(--accent-blue);">Dido's problem</a> and
             <a href="../soap_bubbles/index.html" style="color: var(--accent-blue);">Soap Bubbles</a>
             show the closed-form answers this method reaches numerically.</p>
@@ -452,7 +491,10 @@
 
     <div id="plot-container">
         <div id="curve-plot"></div>
-        <div id="lam-plot"></div>
+        <div id="bottom-row">
+            <div id="resid-plot"></div>
+            <div id="lam-plot"></div>
+        </div>
     </div>
 
     <div id="controls">
@@ -714,6 +756,11 @@
         let N = 40, stepsPerFrame = 15, target = problem.tDefault;
         let y, h, st, iters = 0, running = false, stalled = false, converged = false, raf = null;
         let lamHist = [], exact = null;
+        // Floor for the residual plot's y-range, set from the starting guess:
+        // without it the axis keeps shrinking to whatever is left, and a
+        // residual that has fallen five orders of magnitude still fills the
+        // panel instead of reading as flat.
+        let residFloor = 1e-6;
         // How often the multiplier is updated. Updating every single step is
         // genuinely unstable — measured on the chain, lambda swings between
         // -21.6 and +6.0 instead of settling at -1.2653 — because the update
@@ -900,12 +947,39 @@
             }
             Plotly.react('curve-plot', traces, cl, CONFIG);
 
+            // Residual R_j = h^-1(dI_N/dy_j - lambda dJ_N/dy_j): the gap between
+            // the two gradients, node by node. Zero everywhere is exactly the
+            // parallel-gradient condition, so this panel is the page's payload.
+            gradInto(problem.obj, problem, y, h, st.gJ);
+            gradInto(problem.con, problem, y, h, st.gC);
+            const rx = [], rv = [];
+            let maxR = 0;
+            for (let j = 1; j < N; j++) {
+                rx.push(problem.a + j * h);
+                const r = (st.gJ[j] - st.lam * st.gC[j]) / h;
+                rv.push(r);
+                maxR = Math.max(maxR, Math.abs(r));
+            }
+            const rl = clone(BASE);
+            rl.title = { text: '\u2207I\u2099 \u2212 \u03bb\u2207J\u2099, node by node', font: { size: 14 } };
+            rl.xaxis.title = { text: 'x' };
+            rl.showlegend = false;
+            rl.margin = { t: 40, r: 16, b: 46, l: 56 };
+            const span = Math.max(maxR, residFloor) * 1.15;
+            rl.yaxis.range = [-span, span];
+            rl.yaxis.autorange = false;
+            Plotly.react('resid-plot', [
+                { x: rx, y: rv, mode: 'lines+markers', line: { color: '#a855f7', width: 2 },
+                  marker: { color: '#a855f7', size: N > 50 ? 4 : 6 } }
+            ], rl, CONFIG);
+
             // Lambda's history, against the value it should reach.
             const ll = clone(BASE);
             ll.title = { text: 'λ, as the descent discovers it', font: { size: 15 } };
             ll.xaxis.title = { text: 'descent step' };
             ll.yaxis.title = { text: 'λ' };
             ll.showlegend = true;
+            ll.margin = { t: 40, r: 16, b: 46, l: 56 };
             const lastIt = Math.max(iters, 1);
             Plotly.react('lam-plot', [
                 { x: [0, lastIt], y: [exact.lam, exact.lam], mode: 'lines', name: 'exact λ',
@@ -917,7 +991,7 @@
             // Readouts
             const J = integrate(problem.obj, problem, y, h);
             const C = integrate(problem.con, problem, y, h);
-            const resid = maxResidual(), ce = consErr();
+            const resid = maxR, ce = consErr();
             $('out-obj').textContent = J.toFixed(6);
             $('out-con').textContent = C.toFixed(6) + '  /  ' + target.toFixed(2);
             $('out-cerr').textContent = ce.toExponential(2);
@@ -976,6 +1050,7 @@
             if (raf) cancelAnimationFrame(raf);
             makeState();
             exact = problem.solve(target);
+            residFloor = Math.max(1e-6, 1e-3 * maxResidual());
             draw();
             syncRunButton();
         }
