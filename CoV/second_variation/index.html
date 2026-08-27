@@ -410,11 +410,18 @@
         <p id="prob-note">&mdash;</p>
 
         <h3>What this is called</h3>
-        <p class="note">Classically all of this travels under <em>the second variation</em>, and the
-            moment an eigenvalue crosses zero is a <em>conjugate point</em>, governed by the Jacobi
-            condition. None of that machinery is needed above: once the functional is an ordinary
-            function of finitely many variables, the ordinary second-derivative test answers the
-            question, and the classical statements are what it becomes as \(N\to\infty\).</p>
+        <p class="note">Classically all of this travels under <em>the second variation</em>. None of that
+            machinery is needed above: once the functional is an ordinary function of finitely many
+            variables, the ordinary second-derivative test answers the question, and the classical
+            statements are what it becomes as \(N\to\infty\).</p>
+
+        <p class="note">Classically the test also splits in two. That \(F_{y'y'}\ge 0\) along the curve
+            is the <em>Legendre</em> condition, which is pointwise; that the interval contains no
+            <em>conjugate point</em> is the <em>Jacobi</em> condition, which is global. The single
+            number \(\kappa_1\) merges them &mdash; but the eigenvector tells you which has failed. A
+            smooth, one-signed bump, with \(\kappa_1\) staying put as \(N\) grows, is a conjugate
+            point: that is the thin-necked film. A zigzag alternating at every node, with
+            \(\kappa_1\) growing without bound, is Legendre failing: that is \(\int(y')^3\).</p>
 
         <h3>Where this sits</h3>
         <p class="note">The <a href="../euler_lagrange/index.html" style="color: var(--accent-blue);">first
@@ -708,6 +715,29 @@
                       '<a href="../soap_bubbles/index.html" style="color:var(--accent-blue)">Soap Bubbles</a> ' +
                       'page calls this the unstable solution.'
             }
+            ,
+            {
+                id: 'cubic',
+                label: 'Cubic:  \u222b\u2080\u00b9 (y\u2032)\u00b3 dx,  y(0)=0, y(1)=\u22121',
+                a: 0, b: 1, ya: 0, yb: -1,
+                F:  (x, y, p) => p * p * p,
+                Fy: () => 0,
+                Fp: (x, y, p) => 3 * p * p,
+                exact: x => -x,
+                // kappa_1 here is of order N, not order 1, so the useful range
+                // of epsilon is far smaller than for the other four.
+                epsMax: 0.03,
+                note: 'The functional the ' +
+                      '<a href="../euler_lagrange/index.html" style="color:var(--accent-blue)">first ' +
+                      'variation</a> page uses for its &ldquo;necessary but not sufficient&rdquo; case. ' +
+                      'Euler&ndash;Lagrange forces \\(3(y\')^2\\) to be constant, so the straight line is ' +
+                      'stationary &mdash; but here \\(F_{y\'y\'} = 6y\' = -6\\) is negative <em>everywhere</em>, ' +
+                      'and the Hessian comes out negative definite: every eigenvalue is negative, so this ' +
+                      'is a maximum rather than a saddle. Look at the eigenvector &mdash; it alternates ' +
+                      'sign from one node to the next. Lowering \\(\\int(y\')^3\\) means making the slope ' +
+                      'oscillate, and the finer the grid the better that works: raise \\(N\\) and ' +
+                      '\\(\\kappa_1\\) doubles as \\(N\\) does. There is no minimiser here at all.'
+            }
         ];
 
         // The oscillator's k is read out of a module-level binding so the
@@ -819,8 +849,10 @@
 
             // readouts
             $('out-k1').textContent = evs[0].toExponential(3);
-            $('out-nneg').textContent = String(evs.filter(e => e < 0).length) +
-                (evs.filter(e => e < 0).length === evs.length ? '+' : '');
+            // Exact, not just among the eight plotted: the Sturm count gives
+            // how many of all N-1 eigenvalues lie below zero.
+            const nNeg = countBelow(H, 0);
+            $('out-nneg').textContent = nNeg + ' of ' + H.n;
             $('out-resid').textContent = residual().toExponential(2);
             $('out-i0').textContent = I0.toFixed(6);
             $('out-ie').textContent = Ie.toFixed(6);
@@ -828,10 +860,16 @@
             $('out-di').textContent = (d >= 0 ? '+' : '') + d.toExponential(2);
 
             const v = $('verdict');
-            if (evs[0] > 0) {
+            if (nNeg === 0) {
                 v.className = 'verdict good';
-                v.innerHTML = '<strong>A minimum.</strong> Every eigenvalue is positive, so \\(I_N\\) ' +
-                    'rises in every direction from here. The parabola on the right opens upwards.';
+                v.innerHTML = '<strong>A local minimum.</strong> Every eigenvalue is positive, so ' +
+                    '\\(I_N\\) rises in every direction from here. The parabola on the right opens ' +
+                    'upwards.';
+            } else if (nNeg === H.n) {
+                v.className = 'verdict bad';
+                v.innerHTML = '<strong>A maximum.</strong> <em>Every</em> eigenvalue is negative, so ' +
+                    '\\(I_N\\) falls in every direction from here &mdash; not a saddle but the other ' +
+                    'extreme.';
             } else {
                 v.className = 'verdict bad';
                 v.innerHTML = '<strong>Not a minimum.</strong> The Hessian has a negative eigenvalue, so ' +
