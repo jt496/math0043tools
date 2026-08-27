@@ -257,6 +257,40 @@
             line-height: 1.55;
         }
 
+        /* The numerics behind the method are worth recording but are not what a
+           student meeting constrained problems needs first, so they fold away.
+           MathJax cannot measure inside a closed <details>, so the script
+           re-typesets one the first time it is opened. */
+        details.aside {
+            margin-top: 30px;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            background: rgba(0, 0, 0, 0.22);
+            padding: 0 16px;
+        }
+
+        details.aside > summary {
+            cursor: pointer;
+            padding: 14px 0;
+            font-size: 1.05rem;
+            font-weight: 600;
+            color: var(--accent-blue);
+            list-style: none;
+        }
+
+        details.aside > summary::-webkit-details-marker { display: none; }
+        details.aside > summary::before { content: '\25b8\00a0'; }
+        details.aside[open] > summary::before { content: '\25be\00a0'; }
+        details.aside > summary:hover { color: var(--primary); }
+
+        details.aside h4 {
+            font-size: 1.02rem;
+            color: var(--text-main);
+            margin: 22px 0 10px;
+        }
+
+        details.aside > *:last-child { margin-bottom: 18px; }
+
         .eq {
             background: rgba(0, 0, 0, 0.35);
             border-radius: 8px;
@@ -399,87 +433,83 @@
 
         <h3>Finding \(\lambda\)</h3>
         <p>One thing is still missing. Parallel gradients pin down the <em>shape</em> of the answer, but
-            not the number \(\lambda\) itself: that is fixed only by the requirement that
-            \(J_N=c\) actually holds. So \(\lambda\) has to be found alongside the curve, and the
-            rest of this panel is how.</p>
+            not the number \(\lambda\) itself: that is fixed only by the requirement that \(J_N=c\)
+            actually holds. So \(\lambda\) has to be found alongside the curve.</p>
 
-        <p>If \(\lambda\) were known there would be nothing left to do &mdash; descend
-            \(K_N=I_N-\lambda J_N\) and stop. It is not known, and that is the whole difficulty.
-            While the running guess at \(\lambda\) is wrong, descending \(K_N\) has no reason to
-            respect the constraint at all: guess too small a \(\lambda\) for the chain and length is
-            too cheap, so the curve just falls. Something has to hold it near \(J_N=c\) while
-            \(\lambda\) is still being found.</p>
-
-        <h3>The penalty</h3>
-        <p>So a penalty is attached, and the descent runs on</p>
-
-        <div class="eq">
-            \[ K_\mu \;=\; K_N \;+\; \tfrac{\mu}{2}\,(J_N-c)^2 . \]
-        </div>
-
-        <p>The added term is zero when the constraint holds and grows as the <em>square</em> of the
-            violation, so its gradient is a restoring pull back towards \(J_N=c\) whose strength is
-            proportional to how far off the curve has got. It is a spring rather than a wall: the curve
-            is allowed to break the constraint, but it pays for doing so, and the further out it goes
-            the harder it is pulled back.</p>
-
-        <p>Every 20 steps the multiplier is then nudged by</p>
+        <p>The page starts it at \(\lambda=0\) &mdash; pretending, at first, that there is no
+            constraint &mdash; descends, and every 20 steps corrects it:</p>
 
         <div class="eq">
             \[ \lambda \;\longleftarrow\; \lambda - \mu\,(J_N - c). \]
         </div>
 
-        <p>Read that in words: <em>if the curve is coming out too long, raise the price of length; if it
-            is too short, lower it.</em></p>
+        <p>In words: <em>if the curve is coming out too long, raise the price of length; if it is too
+            short, lower it.</em> A penalty term, described below, holds the curve near \(J_N=c\)
+            while this is going on. Watch the lower-right plot: the value \(\lambda\) settles on is a
+            genuine discovery of the algorithm, and it agrees with the analytic multiplier printed
+            beneath it.</p>
 
-        <p class="note">Note what is <em>not</em> changed by any of this. The penalty vanishes at the
-            answer, where \(J_N=c\) exactly, so the curve the descent settles on is a stationary point
-            of \(K_N\) itself &mdash; which is to say it satisfies
-            \(\nabla I_N = \lambda\nabla J_N\), exactly what the argument above asked for. The
-            penalty is scaffolding for getting there, not part of the answer.</p>
+        <details class="aside">
+            <summary>Inside the descent</summary>
 
-        <h3>What \(\mu\) is, and why 20 steps</h3>
-        <p>\(\mu>0\) is the stiffness of that spring. Notice that the <em>same</em> \(\mu\) is also
-            the step size in the \(\lambda\) update, which is not a coincidence: that update is a
-            gradient step in \(\lambda\), and taking it at the penalty's own strength is what makes the
-            curve and the multiplier converge together. One consequence is that \(\mu=0\) does not
-            merely switch the penalty off &mdash; it freezes \(\lambda\) at \(0\), and nothing is
-            ever found.</p>
+            <p class="note">None of this is part of the mathematics above &mdash; it is how the page
+                turns that mathematics into something that runs. Skip it freely.</p>
 
-        <p class="note">It is a dial with a wide flat bottom rather than a knife edge. At \(N=40\) the
-            chain converges in 2946 steps at \(\mu=2\), 3547 at the \(50\) this page uses, 6403 at
-            \(200\) and 26900 at \(1000\).</p>
+            <h4>The penalty</h4>
+            <p>If \(\lambda\) were known there would be nothing left to do: descend
+                \(K_N=I_N-\lambda J_N\) and stop. While the running guess is wrong, though,
+                descending \(K_N\) has no reason to respect the constraint at all &mdash; guess too
+                small a \(\lambda\) for the chain and length is too cheap, so the curve just falls.
+                So the descent actually runs on</p>
 
-        <p>How is it chosen? By hand, once per problem, and then held fixed for the whole descent:
-            \(50\) for the two length constraints and \(200\) for the area one, each picked from a
-            sweep like that one and sitting comfortably inside its basin rather than at the very bottom.
-            There is no formula, and \(\mu\) is not dimensionless &mdash; it multiplies a squared
-            constraint violation, so a problem that fixes a length and a problem that fixes an area
-            genuinely need different numbers.</p>
+            <div class="eq">
+                \[ K_\mu \;=\; K_N \;+\; \tfrac{\mu}{2}\,(J_N-c)^2 . \]
+            </div>
 
-        <p class="note">Should it not adapt? The textbook augmented-Lagrangian method does raise
-            \(\mu\) as it runs, stiffening the penalty whenever the constraint is still violated
-            <em>after the inner minimisation has been solved</em>. That last clause is the catch: this
-            page never solves an inner problem. It descends continuously and nudges \(\lambda\) every
-            20 steps, so &ldquo;the violation did not fall much over the last 20 steps&rdquo; usually
-            means the descent has not got there yet, not that the penalty is too soft. Stiffening on
-            that signal pushes \(\mu\) up into the ill-conditioned range and makes matters worse:
-            implemented and measured, it drove \(\mu\) past \(10^4\) and failed to converge on 6 of
-            27 runs across the three problems, against 27 of 27 for the constant. Adapting \(\mu\)
-            honestly would need an inner/outer loop, and the animation would stop being one continuous
-            descent.</p>
+            <p>The added term is zero when the constraint holds and grows as the <em>square</em> of the
+                violation, so its gradient is a restoring pull back towards \(J_N=c\) whose strength is
+                proportional to how far off the curve has got. It is a spring rather than a wall: the
+                curve may break the constraint, but it pays, and the further out it goes the harder it
+                is pulled back.</p>
 
-        <p class="note">The 20 is the one constant here that has a sharp edge on one side. The update
-            assumes the curve has had a chance to settle at the current price; update after every single
-            step and price and curve chase each other. Measured on the chain, \(\lambda\) then swings
-            between \(-21.6\) and \(+6.0\) instead of settling at \(-1.2653\), and the descent never
-            converges at all. Past that the cadence is not delicate &mdash; every 2 steps, every 20 and
-            every 200 all converge in much the same number of steps. Twenty is a comfortable margin, not
-            a tuned value.</p>
+            <p class="note">The penalty vanishes at the answer, where \(J_N=c\) exactly, so the curve
+                the descent settles on is a stationary point of \(K_N\) itself &mdash; which is to say
+                it satisfies \(\nabla I_N = \lambda\nabla J_N\), exactly what the argument above
+                asked for. The penalty is scaffolding for getting there, not part of the answer.</p>
 
-        <p class="note">\(\lambda\) starts at \(0\), which is to say the page starts by pretending there
-            is no constraint at all. Watch the lower plot: the value it settles on is a genuine
-            discovery of the algorithm, and it agrees with the analytic multiplier printed beneath it.</p>
+            <h4>What \(\mu\) is</h4>
+            <p>\(\mu>0\) is the stiffness of that spring. The <em>same</em> \(\mu\) is also the
+                step size in the \(\lambda\) update, which is no coincidence: that update is a
+                gradient step in \(\lambda\), and taking it at the penalty's own strength is what
+                makes curve and multiplier converge together. One consequence is that \(\mu=0\) does
+                not merely switch the penalty off &mdash; it freezes \(\lambda\) at \(0\), and
+                nothing is ever found.</p>
+
+            <p>It is chosen by hand, once per problem, and held fixed: \(50\) for the two length
+                constraints and \(200\) for the area one. There is no formula, and \(\mu\) is not
+                dimensionless &mdash; it multiplies a squared constraint violation, so a problem fixing
+                a length and a problem fixing an area need different numbers. The dial has a wide flat
+                bottom: at \(N=40\) the chain converges in 2946 steps at \(\mu=2\), 3547 at the
+                \(50\) used here, 6403 at \(200\) and 26900 at \(1000\).</p>
+
+            <p class="note">Should it not adapt? The textbook augmented-Lagrangian method does raise
+                \(\mu\) as it runs, stiffening the penalty whenever the constraint is still violated
+                <em>after the inner minimisation has been solved</em>. That last clause is the catch:
+                this page never solves an inner problem &mdash; it descends continuously and nudges
+                \(\lambda\) every 20 steps, so &ldquo;the violation did not fall much over the last 20
+                steps&rdquo; usually means the descent has not got there yet, not that the penalty is too
+                soft. Measured over 27 configurations, the constant converged 27 times and the adaptive
+                rule 21, driving \(\mu\) past \(10^4\). Adapting it honestly would need an
+                inner/outer loop, and the animation would stop being one continuous descent.</p>
+
+            <h4>Why 20 steps</h4>
+            <p class="note">The update assumes the curve has had a chance to settle at the current
+                price. Update after every single step and price and curve chase each other: measured on
+                the chain, \(\lambda\) then swings between \(-21.6\) and \(+6.0\) instead of
+                settling at \(-1.2653\), and the descent never converges. Past that the cadence is not
+                delicate &mdash; every 2 steps, every 20 and every 200 all converge in much the same
+                number of steps. Twenty is a comfortable margin, not a tuned value.</p>
+        </details>
 
         <h3>\(\lambda\) is not just a number</h3>
         <p id="lam-meaning">&mdash;</p>
@@ -1143,6 +1173,20 @@
             syncRunButton();
         });
         $('btn-reset').addEventListener('click', () => { running = false; reset(); });
+
+        // MathJax measures glyph widths from the layout, and a closed <details>
+        // has none, so anything typeset while folded can come back mis-sized.
+        // Re-typeset each fold once, the first time it is actually opened.
+        document.querySelectorAll('details.aside').forEach(d => {
+            d.addEventListener('toggle', () => {
+                if (!d.open || d.dataset.typeset) return;
+                d.dataset.typeset = '1';
+                if (window.MathJax && MathJax.typesetPromise) {
+                    if (MathJax.typesetClear) MathJax.typesetClear([d]);
+                    MathJax.typesetPromise([d]).catch(() => {});
+                }
+            });
+        });
 
         $('problem-select').value = '0';
         loadProblem();
