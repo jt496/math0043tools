@@ -429,7 +429,7 @@
             partial derivatives.</p>
 
         <h3>The step the page takes</h3>
-        <p>One press of <em>Step</em> moves every interior node once:</p>
+        <p>The basic move of the method takes every interior node at once:</p>
 
         <div class="eq">
             \[ y_j \;\longleftarrow\; y_j \,-\, t\,\frac{\partial I_N}{\partial y_j},
@@ -438,16 +438,74 @@
 
         <p>Each node moves <em>against</em> its own partial derivative, which is the direction that
             makes \(I_N\) smaller. The step size \(t\) is not fixed: it is halved until \(I_N\)
-            really does decrease, so the curve can never overshoot and jump uphill. <em>Descend</em>
-            just repeats this step over and over until the derivatives are zero; the
-            <em>Steps per redraw</em> slider sets how many it gets through between refreshes of the
-            plots, so turning it up makes the curve settle sooner in real time without changing
-            anything about the method.</p>
+            really does decrease, so the curve can never overshoot and jump uphill. The
+            <em>Steps per redraw</em> slider sets how many such steps are taken between refreshes
+            of the plots: <em>Redraw</em> takes that many for each click, while <em>Descend</em>
+            keeps taking them until the derivatives are zero. Turning the slider up makes the curve
+            settle sooner in real time without changing anything about the method.</p>
 
         <h3>Where Euler&ndash;Lagrange comes from</h3>
         <p>Here is the point of the page. The height \(y_j\) appears in exactly two terms of that sum:
             segment \(j-1\), where it is the right-hand node, and segment \(j\), where it is the left-hand
-            one. Differentiating just those two,</p>
+            one. In each of those two terms it enters through just two of \(F\)'s three arguments,
+            the midpoint height and the slope:</p>
+
+        <div class="eq">
+            \[ \begin{aligned}
+                \bar y_{j-1} &= \frac{y_{j-1}+y_j}{2}, & p_{j-1} &= \frac{y_j-y_{j-1}}{h}, \\[4pt]
+                \bar y_{j}   &= \frac{y_j+y_{j+1}}{2}, & p_{j}   &= \frac{y_{j+1}-y_j}{h}.
+               \end{aligned} \]
+        </div>
+
+        <p>Raise \(y_j\) on its own and you can read off what happens: both midpoint heights rise by
+            half as much, the slope to the left of the node steepens by \(1/h\) times as much, and the
+            slope to the right flattens by the same. So the four derivatives are</p>
+
+        <div class="eq">
+            \[ \begin{aligned}
+                \frac{\partial \bar y_{j-1}}{\partial y_j} &= \frac{\partial \bar y_{j}}{\partial y_j} = \frac12, \\[4pt]
+                \frac{\partial p_{j-1}}{\partial y_j} &= +\frac1h, \qquad
+                \frac{\partial p_{j}}{\partial y_j} = -\frac1h.
+               \end{aligned} \]
+        </div>
+
+        <p class="note">Two different kinds of derivative appear from here on. The subscript in
+            \(F_y\) means \(\partial F/\partial y\) with \(F\) read as a function of its three
+            slots \((x,y,y')\) &mdash; the same \(F_y\) as in the Euler&ndash;Lagrange equation, and
+            something you can write down from the problem alone. The superscript says only <em>where to
+            evaluate it</em>: \(F_y^{(k)}=F_y(\bar x_k,\bar y_k,p_k)\), so \(F_y^{(j-1)}\) and
+            \(F_y^{(j)}\) are one function at two different points. Neither is a derivative with
+            respect to \(y_j\); that is the thing on the left-hand side.</p>
+
+        <p>Now the chain rule. Writing \(F^{(k)}\) for \(F\) evaluated at segment \(k\)'s
+            arguments, the rule for the \(k\)-th term \(h\,F^{(k)}\) runs over all three
+            slots at once:</p>
+
+        <div class="eq">
+            \[ \begin{aligned}
+                \frac{\partial\,\big[h F^{(k)}\big]}{\partial y_j}
+                  = h\Big[\; & F_x^{(k)}\,\frac{\partial \bar x_k}{\partial y_j}
+                      + F_y^{(k)}\,\frac{\partial \bar y_k}{\partial y_j} \\[2pt]
+                  & + F_{y'}^{(k)}\,\frac{\partial p_k}{\partial y_j} \;\Big].
+               \end{aligned} \]
+        </div>
+
+        <p>The first term is absent whatever \(k\) is, because \(\bar x_k = a+(k+\tfrac12)h\) is a
+            fixed grid point with no \(y\) in it at all. Putting the four derivatives above into the
+            other two slots, for the two terms that involve \(y_j\),</p>
+
+        <div class="eq">
+            \[ \begin{aligned}
+                \frac{\partial\,\big[h F^{(j-1)}\big]}{\partial y_j}
+                  &= h\Big(\tfrac12 F_y^{(j-1)} + \tfrac1h F_{y'}^{(j-1)}\Big) \\[2pt]
+                  &= \tfrac h2 F_y^{(j-1)} + F_{y'}^{(j-1)}, \\[6pt]
+                \frac{\partial\,\big[h F^{(j)}\big]}{\partial y_j}
+                  &= h\Big(\tfrac12 F_y^{(j)} - \tfrac1h F_{y'}^{(j)}\Big) \\[2pt]
+                  &= \tfrac h2 F_y^{(j)} - F_{y'}^{(j)}.
+               \end{aligned} \]
+        </div>
+
+        <p>and adding the two gives the whole derivative:</p>
 
         <div class="eq">
             \[ \frac{\partial I_N}{\partial y_j} = \frac{h}{2}\Big(F_y^{(j-1)}\!+F_y^{(j)}\Big)
@@ -463,7 +521,7 @@
 
         <p><strong>The discrete gradient <em>is</em> the Euler&ndash;Lagrange expression.</strong>
             Setting \(\nabla I_N = 0\) &mdash; the ordinary first-derivative test &mdash; becomes the
-            Euler&ndash;Lagrange equation as \(N\to\infty\). It was never pulled out of a hat.</p>
+            Euler&ndash;Lagrange equation as \(N\to\infty\). </p>
 
         <p class="note">That is what the lower plot shows: the residual at node \(j\) is exactly
             \(h^{-1}\partial I_N/\partial y_j\) &mdash; the same derivative the step above uses. When
@@ -520,7 +578,7 @@
 
             <div style="display: flex; gap: 8px; margin-top: 16px;">
                 <button id="btn-run" class="btn go" title="Repeat the step above until the derivatives are zero">Descend</button>
-                <button id="btn-step" class="btn" title="Take one descent step: move every interior node once">Step</button>
+                <button id="btn-redraw" class="btn" title="Take the chosen number of descent steps, then stop">Redraw</button>
                 <button id="btn-reset" class="btn" title="Throw the curve away and start again from the chosen guess">Reset</button>
             </div>
         </div>
@@ -538,7 +596,7 @@
             <div class="readout"><span class="k">steps taken</span>
                 <span class="v" id="out-iter">0</span></div>
             <div id="verdict" class="verdict">Press <strong>Descend</strong> to start improving the
-                curve, or <strong>Step</strong> to move every node once.</div>
+                curve, or <strong>Redraw</strong> to take the chosen number of steps and stop.</div>
         </div>
     </div>
 
@@ -973,7 +1031,7 @@
             } else {
                 v.className = 'verdict';
                 v.innerHTML = 'Press <strong>Descend</strong> to start improving the curve, or ' +
-                    '<strong>Step</strong> to move every node once.';
+                    '<strong>Redraw</strong> to take the chosen number of steps and stop.';
             }
             if (window.MathJax && MathJax.typesetPromise) {
                 MathJax.typesetPromise([v]).catch(() => {});
@@ -1204,9 +1262,17 @@
             if (running) raf = requestAnimationFrame(frame);
             else if (raf) cancelAnimationFrame(raf);
         });
-        $('btn-step').addEventListener('click', () => {
+        // One click does exactly what one animation frame does — the same batch
+        // of steps, plotted once at the end — so Redraw and Descend differ only
+        // in whether the batches keep coming.
+        $('btn-redraw').addEventListener('click', () => {
             running = false; syncRunButton();
-            if (descend(problem, y, h, state)) iters++; else stalled = true;
+            if (stalled || converged) return;
+            for (let i = 0; i < stepsPerFrame; i++) {
+                if (!descend(problem, y, h, state)) { stalled = true; break; }
+                iters++;
+            }
+            if (maxResidual() < CONVERGED) converged = true;
             draw();
         });
         $('btn-reset').addEventListener('click', () => {
