@@ -244,6 +244,34 @@
             line-height: 1.55;
         }
 
+
+        /* The numerical small print is worth recording but is not what a
+           student meeting this question needs first, so it folds away.
+           MathJax cannot measure inside a closed <details>, so the script
+           re-typesets one the first time it is opened. */
+        details.aside {
+            margin-top: 22px;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            background: rgba(0, 0, 0, 0.22);
+            padding: 0 16px;
+        }
+
+        details.aside > summary {
+            cursor: pointer;
+            padding: 14px 0;
+            font-size: 1.02rem;
+            font-weight: 600;
+            color: var(--accent-blue);
+            list-style: none;
+        }
+
+        details.aside > summary::-webkit-details-marker { display: none; }
+        details.aside > summary::before { content: '\25b8\00a0'; }
+        details.aside[open] > summary::before { content: '\25be\00a0'; }
+        details.aside > summary:hover { color: var(--primary); }
+        details.aside > *:last-child { margin-bottom: 18px; }
+
         .eq {
             background: rgba(0, 0, 0, 0.35);
             border-radius: 8px;
@@ -335,19 +363,22 @@
             along it. The lower-right panel plots \(I_N\) as you do so &mdash; a parabola opening
             upwards at a minimum, downwards when the test fails.</p>
 
-        <p class="note">The \(O(\varepsilon^3)\) is what pulls the lower-right curve away from a true
-            parabola once \(\varepsilon\) is large. For the oscillator it is identically zero &mdash;
-            there \(I_N\) really is quadratic, so the parabola is exact &mdash; and for the straight
-            line it happens to vanish as well, leaving \(O(\varepsilon^4)\).</p>
+        <details class="aside">
+            <summary>How exact is that expansion?</summary>
 
-        <p class="note">One honest caveat, and it is what the residual in the panel is for. This page
-            plots the curve that solves Euler&ndash;Lagrange <em>exactly</em>, and such a curve is only
-            \(O(h)\)-stationary for the discretised \(I_N\). So the first-order term
-            \(\varepsilon\,\nabla I_N\!\cdot v\) is small rather than zero: for the fat-necked film
-            at \(N=60\) it is about \(8\times10^{-5}\), against a quadratic coefficient of
-            \(0.58\). Put it back in and the leftover is cubic to three figures. Raise \(N\) and the
-            residual falls; for the oscillator, whose stationary curve \(y\equiv0\) is exact for
-            \(I_N\) too, it is zero outright.</p>
+            <p class="note">The \(O(\varepsilon^3)\) is what pulls the lower-right curve away from a
+                true parabola once \(\varepsilon\) is large. For the oscillator it is identically zero
+                &mdash; there \(I_N\) really is quadratic, so the parabola is exact &mdash; and for the
+                straight line it happens to vanish as well, leaving \(O(\varepsilon^4)\).</p>
+
+            <p class="note">The first-order term is also not <em>quite</em> zero, and that is what the
+                residual in the panel measures. This page plots the curve that solves
+                Euler&ndash;Lagrange exactly, and such a curve is only \(O(h)\)-stationary for the
+                discretised \(I_N\), so \(\varepsilon\,\nabla I_N\!\cdot v\) is small rather than
+                absent: about \(8\times10^{-5}\) for the fat-necked film at \(N=60\), against a
+                quadratic coefficient of \(0.58\). Raise \(N\) and it falls; for the oscillator,
+                whose \(y\equiv0\) is stationary for \(I_N\) as well, it is zero outright.</p>
+        </details>
 
         <p class="note">The eigenvector is exactly the perturbation \(\eta\) that the
             Euler&ndash;Lagrange page invites you to try by hand. There, you pick \(\eta\) and see what
@@ -648,9 +679,9 @@
                 note: 'The other root, \\(\\mu=' + MU_DEEP.toFixed(4) + '\\), and the test fails: one ' +
                       'eigenvalue is negative. Look at its eigenvector on the upper plot &mdash; it is ' +
                       'one-signed and largest at the middle, so it moves the <strong>whole neck</strong> ' +
-                      'in or out. Either way lowers the area, since \\(I_N\\) changes by ' +
-                      '\\(\\tfrac12\\kappa\\varepsilon^2\\) and \\(\\kappa<0\\) &mdash; which is why the ' +
-                      'parabola on the right falls away on both sides. Pinching inwards is the half you ' +
+                      'in or out. Either way lowers the area, since the change is ' +
+                      '\\(\\tfrac12\\varepsilon^2 v^{\\mathsf T}Hv\\) and that is negative &mdash; which is why ' +
+                      'the parabola on the right falls away on both sides. Pinching inwards is the half you ' +
                       'see in practice: it is how a real film of this shape breaks. Stationary, and not a ' +
                       'minimum: the ' +
                       '<a href="../soap_bubbles/index.html" style="color:var(--accent-blue)">Soap Bubbles</a> ' +
@@ -849,6 +880,20 @@
         });
         $('btn-zero').addEventListener('click', () => {
             eps = 0; syncEpsSlider(); draw();
+        });
+
+        // MathJax measures glyph widths from the layout, and a closed <details>
+        // has none, so anything typeset while folded can come back mis-sized.
+        // Re-typeset each fold once, the first time it is actually opened.
+        document.querySelectorAll('details.aside').forEach(d => {
+            d.addEventListener('toggle', () => {
+                if (!d.open || d.dataset.typeset) return;
+                d.dataset.typeset = '1';
+                if (window.MathJax && MathJax.typesetPromise) {
+                    if (MathJax.typesetClear) MathJax.typesetClear([d]);
+                    MathJax.typesetPromise([d]).catch(() => {});
+                }
+            });
         });
 
         $('problem-select').value = '0';
