@@ -54,7 +54,7 @@
         }
 
         #sidebar {
-            width: 46vh;
+            width: 400px;
             padding: 30px;
             background: var(--panel-bg);
             z-index: 10;
@@ -246,14 +246,53 @@
             color: var(--primary);
             pointer-events: none;
         }
+
+        /* --- shared presentation, matching euler_lagrange / direct_method /
+           constrained: a classed back link and boxed display equations. --- */
+        .back-link {
+            display: inline-block;
+            margin-bottom: 20px;
+            color: var(--accent-blue);
+            text-decoration: none;
+            font-weight: 600;
+        }
+
+        .back-link:hover { text-decoration: underline; }
+
+        .eq {
+            background: rgba(0, 0, 0, 0.35);
+            border-radius: 8px;
+            padding: 14px;
+            margin: 14px 0;
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            /* A wide equation scrolls sideways rather than widening the panel. */
+            overflow-x: auto;
+        }
+
+        .eq mjx-container[display] { margin: 0 !important; }
+
+        .note {
+            font-size: 0.92rem;
+            color: var(--text-muted);
+            line-height: 1.55;
+        }
+
+        @media (max-width: 1000px) {
+            body { flex-direction: column; height: auto; overflow: auto; }
+            #sidebar {
+                width: auto; height: auto; max-height: none;
+                border-right: none;
+                border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+                box-shadow: none;
+            }
+            #canvas-container { height: 80vh; }
+        }
     </style>
 </head>
 
 <body>
     <div id="sidebar">
-        <a href="../index.html"
-            style="display: inline-block; margin-bottom: 20px; color: var(--accent-blue); text-decoration: none; font-weight: 600;">&larr;
-            Back to CoV Home</a>
+        <a href="../index.html" class="back-link">&larr; Back to CoV Home</a>
         <h1>Lagrange Multipliers</h1>
 
         <!-- <p>

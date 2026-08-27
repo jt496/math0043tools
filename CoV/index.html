@@ -103,7 +103,33 @@
             grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
             gap: 25px;
             width: 100%;
+        }
+
+        /* The cards fall into three kinds, and saying so is more use than one
+           undifferentiated wall of them. */
+        .section {
+            width: 100%;
             max-width: 1000px;
+            margin-top: 52px;
+        }
+
+        .section:first-of-type { margin-top: 0; }
+
+        .section-title {
+            font-size: 0.95rem;
+            font-weight: 600;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            color: var(--primary);
+            opacity: 0.85;
+            margin: 0 0 6px;
+        }
+
+        .section-sub {
+            font-size: 0.95rem;
+            color: var(--text-muted);
+            margin: 0 0 22px;
+            line-height: 1.5;
         }
 
         .card {
@@ -192,13 +218,15 @@
             and soap bubbles to Dido's problem.</p>
     </header>
 
-    <div class="grid">
+    <section class="section">
+        <h2 class="section-title">Theory</h2>
+        <p class="section-sub">How the subject is set up, and the two stationarity conditions it rests on.</p>
+        <div class="grid">
         <a href="slides/index.html" class="card">
             <div class="icon">📽️</div>
             <h2>Lecture Slides</h2>
             <p>Overview of the theory, history, and applications of the Calculus of Variations.</p>
         </a>
-
         <a href="euler_lagrange/index.html" class="card">
                 <div class="icon" style="
                     font-family: 'Times New Roman', serif;
@@ -212,7 +240,27 @@
             <h2>The Euler&ndash;Lagrange Equation</h2>
             <p>Perturb a candidate extremal and watch the functional vary.</p>
         </a>
+        <a href="lagrange/index.html" class="card">
+                <div class="icon" style="
+                    font-family: 'Times New Roman', serif;
+                    font-size: 2.2em;
+                    background: linear-gradient(135deg, #6a5acd 0%, #00bfff 100%);
+                    -webkit-background-clip: text;
+                    -webkit-text-fill-color: transparent;
+                    text-shadow: 0 2px 6px rgba(106,90,205,0.15);
+                    display: inline-block;
+                ">&#x03BB;</div>
+            <h2>Lagrange Multipliers</h2>
+            <p>3D visualisation of constrained optimization and the geometric intuition behind the condition \[\nabla
+                f = \lambda \nabla g.\]</p>
+        </a>
+        </div>
+    </section>
 
+    <section class="section">
+        <h2 class="section-title">Numerical methods</h2>
+        <p class="section-sub">Find the minimiser directly, without ever solving the Euler&ndash;Lagrange equation.</p>
+        <div class="grid">
         <a href="direct_method/index.html" class="card">
                 <div class="icon" style="
                     font-family: 'Times New Roman', serif;
@@ -227,7 +275,6 @@
             <p>Minimise a functional without ever solving an ODE: represent the curve as a polyline, run
                 gradient descent on it, and watch the Euler&ndash;Lagrange residual flatten to zero.</p>
         </a>
-
         <a href="constrained/index.html" class="card">
                 <div class="icon" style="
                     font-family: 'Times New Roman', serif;
@@ -243,21 +290,13 @@
                 length, a fence of fixed perimeter &mdash; and watch the Lagrange multiplier be
                 discovered rather than supplied.</p>
         </a>
+        </div>
+    </section>
 
-        <a href="lagrange/index.html" class="card">
-                <div class="icon" style="
-                    font-family: 'Times New Roman', serif;
-                    font-size: 2.2em;
-                    background: linear-gradient(135deg, #6a5acd 0%, #00bfff 100%);
-                    -webkit-background-clip: text;
-                    -webkit-text-fill-color: transparent;
-                    text-shadow: 0 2px 6px rgba(106,90,205,0.15);
-                    display: inline-block;
-                ">&#x03BB;</div>
-            <h2>Lagrange Multipliers</h2>
-            <p>3D visualisation of constrained optimization and the geometric intuition behind the condition \[\nabla
-                f = \lambda \nabla g.\]</p>
-        </a>
+    <section class="section">
+        <h2 class="section-title">Classical problems</h2>
+        <p class="section-sub">The named problems, and the closed-form curves that solve them.</p>
+        <div class="grid">
         <a href="brachistochrone/index.html" class="card">
             <div class="icon">🎢</div>
             <h2>Brachistochrone</h2>
@@ -270,13 +309,13 @@
             <p>Explore catenoids and the minimal surface problem between two rings. Visualise stable, unstable, and
                 Goldschmidt solutions.</p>
         </a>
-
         <a href="dido/index.html" class="card">
             <div class="icon">🏹</div>
             <h2>Dido's Problem</h2>
             <p>Find the curve that bounds the maximum area for a given perimeter.</p>
         </a>
-    </div>
+        </div>
+    </section>
 
     <footer>
         MATH0043 &bull; Calculus of Variations

@@ -28,6 +28,7 @@
     <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
     <style>
         :root {
+            color-scheme: dark;
             --primary: #eebb22;
             --primary-hover: #ffcc33;
             --bg-dark: #0f1115;
@@ -51,7 +52,7 @@
         }
 
         #sidebar {
-            width: 450px;
+            width: 400px;
             padding: 30px;
             background: var(--panel-bg);
             z-index: 10;
@@ -198,15 +199,59 @@
             height: 6px;
             background: var(--border);
         }
+
+        /* --- shared presentation, matching euler_lagrange / direct_method /
+           constrained: a classed back link and boxed display equations. --- */
+        .back-link {
+            display: inline-block;
+            margin-bottom: 20px;
+            color: var(--accent-blue);
+            text-decoration: none;
+            font-weight: 600;
+        }
+
+        .back-link:hover { text-decoration: underline; }
+
+        .eq {
+            background: rgba(0, 0, 0, 0.35);
+            border-radius: 8px;
+            padding: 14px;
+            margin: 14px 0;
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            /* A wide equation scrolls sideways rather than widening the panel. */
+            overflow-x: auto;
+        }
+
+        .eq mjx-container[display] { margin: 0 !important; }
+
+        .note {
+            font-size: 0.92rem;
+            color: var(--text-muted);
+            line-height: 1.55;
+        }
+
+        /* Below three-column width, drop the prose under the plots. */
+        @media (max-width: 1000px) {
+            body { flex-direction: column; height: auto; overflow: auto; }
+            #sidebar {
+                width: auto; height: auto; max-height: none;
+                border-right: none;
+                border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+                box-shadow: none;
+            }
+            #plot-container { height: 88vh; }
+        }
     </style>
 </head>
 
 <body>
     <div id="sidebar">
-        <a href="../index.html"
-            style="display: inline-block; margin-bottom: 20px; color: var(--accent-blue); text-decoration: none; font-weight: 600;">&larr;
-            Back to CoV Home</a>
-        <h1>Soap Bubbles: \[\frac{\cosh(\mu)}{\mu} = c\]</h1>
+        <a href="../index.html" class="back-link">&larr; Back to CoV Home</a>
+        <h1>Soap Bubbles</h1>
+
+        <div class="eq">
+            \[ \frac{\cosh(\mu)}{\mu} = c \]
+        </div>
 
         <p>The equation \(\frac{\cosh(\mu)}{\mu} = c\) arises when finding the shape of a soap film stretched between
             two
@@ -419,7 +464,7 @@
         };
 
         // Initialize Plotly for Function Plot
-        Plotly.newPlot('plotly-div', [tracePos, traceLine, traceRoots], layout, { responsive: true });
+        Plotly.newPlot('plotly-div', [tracePos, traceLine, traceRoots], layout, { responsive: true, displayModeBar: false });
 
         // Initialize Plotly for Bubble Plot (3D)
         const bubbleLayout = {
@@ -443,7 +488,7 @@
             }
         };
 
-        Plotly.newPlot('bubble-plot-div', [], bubbleLayout, { responsive: true });
+        Plotly.newPlot('bubble-plot-div', [], bubbleLayout, { responsive: true, displayModeBar: false });
 
         function updatePlot() {
             const cRaw = parseFloat(slider.value);
@@ -499,7 +544,7 @@
                     hovertemplate: 'Stable \u03BC: %{x:.4f}<extra></extra>'
                 });
             }
-            Plotly.react('plotly-div', updatedTraces, layout, { responsive: true });
+            Plotly.react('plotly-div', updatedTraces, layout, { responsive: true, displayModeBar: false });
 
             // Update 3D Bubble Plot
             const a = 1.0;
@@ -579,7 +624,7 @@
             const camera = (plotDiv && plotDiv._fullLayout && plotDiv._fullLayout.scene) ? plotDiv._fullLayout.scene.camera : null;
             if (camera) bubbleLayout.scene.camera = camera;
 
-            Plotly.react('bubble-plot-div', data3D, bubbleLayout, { responsive: true });
+            Plotly.react('bubble-plot-div', data3D, bubbleLayout, { responsive: true, displayModeBar: false });
         }
 
         slider.addEventListener('input', () => {

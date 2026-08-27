@@ -28,6 +28,7 @@
     <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
     <style>
         :root {
+            color-scheme: dark;
             --primary: #eebb22;
             --primary-hover: #ffcc33;
             --bg-dark: #0f1115;
@@ -51,7 +52,7 @@
         }
 
         #sidebar {
-            width: 450px;
+            width: 400px;
             padding: 30px;
             background: var(--panel-bg);
             z-index: 10;
@@ -234,26 +235,79 @@
             height: 6px;
             background: rgba(255, 255, 255, 0.2);
         }
+
+        /* --- shared presentation, matching euler_lagrange / direct_method /
+           constrained: a classed back link and boxed display equations. --- */
+        .back-link {
+            display: inline-block;
+            margin-bottom: 20px;
+            color: var(--accent-blue);
+            text-decoration: none;
+            font-weight: 600;
+        }
+
+        .back-link:hover { text-decoration: underline; }
+
+        .eq {
+            background: rgba(0, 0, 0, 0.35);
+            border-radius: 8px;
+            padding: 14px;
+            margin: 14px 0;
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            /* A wide equation scrolls sideways rather than widening the panel. */
+            overflow-x: auto;
+        }
+
+        .eq mjx-container[display] { margin: 0 !important; }
+
+        .note {
+            font-size: 0.92rem;
+            color: var(--text-muted);
+            line-height: 1.55;
+        }
+
+        /* Below three-column width, drop the prose under the plots. */
+        @media (max-width: 1000px) {
+            body { flex-direction: column; height: auto; overflow: auto; }
+            #sidebar {
+                width: auto; height: auto; max-height: none;
+                border-right: none;
+                border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+                box-shadow: none;
+            }
+            #plot-container { height: 88vh; }
+        }
     </style>
 </head>
 
 <body>
     <div id="sidebar">
-        <a href="../index.html"
-            style="display: inline-block; margin-bottom: 20px; color: var(--accent-blue); text-decoration: none; font-weight: 600;">&larr;
-            Back to CoV Home</a>
-        <h1>Brachistochrone: \[\frac{\theta_f - \sin\theta_f}{1 - \cos\theta_f} = c\]</h1>
+        <a href="../index.html" class="back-link">&larr; Back to CoV Home</a>
+        <h1>The Brachistochrone</h1>
+
+        <div class="eq">
+            \[ \frac{\theta_f - \sin\theta_f}{1 - \cos\theta_f} = c \]
+        </div>
 
         <p>The <strong>Brachistochrone problem</strong> asks for the shape of the curve between two points \( (0,0) \)
             and \( (a,h) \) that a mass will slide down under gravity in the shortest possible time. (Note: here \(y\)
             is measured downwards).</p>
 
-        <p>The solution is a <strong>cycloid</strong>, parameterized as:
-            \[ x(\theta) = r(\theta - \sin\theta) \]
-            \[ y(\theta) = r(1 - \cos\theta) \]
-            where \(\theta\) is the parameter. At the endpoint \( (a,h) \), the parameter reaches a final value
-            \(\theta_f\), satisfying:
-            \[ \frac{x}{y} = \frac{\theta_f - \sin\theta_f}{1 - \cos\theta_f} = \frac{a}{h} = c \]</p>
+        <p>The solution is a <strong>cycloid</strong>, parameterized as:</p>
+
+        <div class="eq">
+            \[ \begin{aligned}
+                x(\theta) &= r(\theta - \sin\theta) \\
+                y(\theta) &= r(1 - \cos\theta)
+               \end{aligned} \]
+        </div>
+
+        <p>where \(\theta\) is the parameter. At the endpoint \( (a,h) \), the parameter reaches a final
+            value \(\theta_f\), satisfying:</p>
+
+        <div class="eq">
+            \[ \frac{x}{y} = \frac{\theta_f - \sin\theta_f}{1 - \cos\theta_f} = \frac{a}{h} = c \]
+        </div>
 
 
 
@@ -406,7 +460,7 @@
             }
         };
 
-        Plotly.newPlot('plotly-div', [traceFunc, traceLine, traceRoot], layout, { responsive: true });
+        Plotly.newPlot('plotly-div', [traceFunc, traceLine, traceRoot], layout, { responsive: true, displayModeBar: false });
 
         // Curve Plot Initialization
         const curveTrace = {
@@ -463,7 +517,7 @@
             visible: false
         };
 
-        Plotly.newPlot('curve-plot-div', [curveTrace, targetMarker, particleTrace], curveLayout, { responsive: true });
+        Plotly.newPlot('curve-plot-div', [curveTrace, targetMarker, particleTrace], curveLayout, { responsive: true, displayModeBar: false });
 
         function updatePlot() {
             let v = parseFloat(slider.value);
