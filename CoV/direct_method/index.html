@@ -224,6 +224,93 @@
 
         .btn.go:hover { background: var(--primary-hover); }
 
+        /* ── Segment modal ───────────────────────────────────────────────── */
+        .link-btn {
+            background: none;
+            border: none;
+            padding: 0;
+            margin-top: 4px;
+            font: inherit;
+            font-size: 0.92rem;
+            font-weight: 600;
+            color: var(--accent-blue);
+            cursor: pointer;
+            text-decoration: underline;
+        }
+
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.72);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 100;
+            padding: 24px;
+        }
+
+        .modal-overlay.hidden { display: none; }
+
+        .modal {
+            background: #12151b;
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            box-shadow: 0 24px 60px rgba(0, 0, 0, 0.7);
+            width: min(900px, 100%);
+            max-height: 90vh;
+            overflow-y: auto;
+            padding: 24px 26px 26px;
+        }
+
+        .modal-header {
+            display: flex;
+            align-items: baseline;
+            justify-content: space-between;
+            gap: 16px;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 12px;
+            margin-bottom: 16px;
+        }
+
+        .modal-header h3 {
+            margin: 0;
+            border: none;
+            padding: 0;
+            color: var(--primary);
+            font-size: 1.25rem;
+        }
+
+        .close-btn {
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            font-size: 1.9rem;
+            line-height: 1;
+            cursor: pointer;
+            padding: 0 4px;
+        }
+
+        .close-btn:hover { color: var(--text-main); }
+
+        .seg-plots {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 14px;
+        }
+
+        .seg-plots > div { height: 290px; min-width: 0; }
+
+        @media (max-width: 720px) {
+            .seg-plots { grid-template-columns: 1fr; }
+        }
+
+        .seg-nums {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(165px, 1fr));
+            gap: 4px 22px;
+            margin-top: 14px;
+        }
+
         .verdict {
             margin-top: 16px;
             padding: 14px;
@@ -328,7 +415,8 @@
 
         <p class="note">That is the <em>midpoint rule</em>, with \(\bar x_k = x_k+\tfrac h2\) the middle
             of the segment and \(\bar y_k = \tfrac12(y_k+y_{k+1})\) the polyline's height there &mdash;
-            which is the average of the two endpoint heights because the segment is straight.</p>
+            which is the average of the two endpoint heights because the segment is straight.
+            <button type="button" id="seg-open" class="link-btn">See this on one segment &rarr;</button></p>
 
         <p>Adding up all \(N\) segments gives a number attached to the \(N-1\) heights:</p>
 
@@ -451,6 +539,53 @@
                 <span class="v" id="out-iter">0</span></div>
             <div id="verdict" class="verdict">Press <strong>Descend</strong> to start improving the
                 curve, or <strong>Step</strong> to move every node once.</div>
+        </div>
+    </div>
+
+    <div id="seg-modal" class="modal-overlay hidden" role="dialog" aria-modal="true"
+         aria-labelledby="seg-modal-title">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 id="seg-modal-title">One segment, one rectangle</h3>
+                <button class="close-btn" id="seg-close" aria-label="Close">&times;</button>
+            </div>
+
+            <p class="note" style="margin-bottom: 14px;">
+                On the left is one segment of the polyline; on the right is the integrand \(F(x,y,y')\)
+                along it, which varies because \(x\) and \(y\) do &mdash; though \(y'\) does not, being
+                the fixed slope \(p_k\). The midpoint rule replaces the area under that curve by the
+                shaded rectangle: one measurement of \(F\), taken in the middle, times the width \(h\).
+                Summing one such rectangle per segment is exactly the \(I_N\) being descended.
+            </p>
+
+            <p class="note" style="margin-bottom: 14px;">
+                This panel runs at its own node count, set below and starting at four, on the curve you
+                are descending resampled that coarsely &mdash; at the working \(N\) a segment is far too
+                short to see anything. Watch whether the blue curve comes out straight or bent. Where
+                \(F\) is straight along the segment, measuring in the middle catches its average exactly
+                and the rectangle is right however coarse the polyline; where \(F\) bends, the rectangle
+                misses, and the miss shrinks as you add nodes.
+            </p>
+
+            <div class="seg-plots">
+                <div id="seg-plot-curve"></div>
+                <div id="seg-plot-integrand"></div>
+            </div>
+
+            <div class="control-group" style="margin-top: 16px;">
+                <label for="seg-n-slider">
+                    <span>Nodes in this illustration</span>
+                    <span id="seg-n" style="color: var(--primary); font-size: 1.1rem;">4</span>
+                </label>
+                <input type="range" id="seg-n-slider" min="2" max="16" step="1" value="4">
+
+                <label for="seg-slider" style="margin-top: 14px;">
+                    <span>Which segment</span>
+                    <span id="seg-k" style="color: var(--primary); font-size: 1.1rem;">&mdash;</span>
+                </label>
+                <input type="range" id="seg-slider" min="0" max="0" step="1" value="0">
+                <div class="seg-nums" id="seg-nums"></div>
+            </div>
         </div>
     </div>
 
@@ -876,6 +1011,155 @@
             b.disabled = converged || stalled;
         }
 
+        // ── Segment modal: the midpoint rule applied once ────────────────────
+        // Everything here is read live off the current polyline, so the number in
+        // the readout really is one term of the I_N being descended.
+        let segK = 1, segN = 4, segY = null, segH = 0;
+
+        /**
+         * The illustration runs at its own, coarser node count: at the working N
+         * a segment is too short for F to change visibly along it, and the
+         * rectangle and the curve sit on top of one another. Resample the curve
+         * being descended onto segN segments — it is piecewise linear, so this
+         * is just interpolation — and apply the rule to that.
+         */
+        function segResample() {
+            segH = (problem.b - problem.a) / segN;
+            segY = new Float64Array(segN + 1);
+            for (let i = 0; i <= segN; i++) {
+                const t = (i / segN) * N;              // position on the working grid
+                const j = Math.min(Math.floor(t), N - 1);
+                segY[i] = y[j] + (t - j) * (y[j + 1] - y[j]);
+            }
+        }
+
+        function segRefresh() {
+            const M = segN, hh = segH, yy = segY;
+            const k = Math.min(segK, M - 1);
+            const xL = problem.a + k * hh, xR = xL + hh;
+            const yL = yy[k], yR = yy[k + 1];
+            const p = (yR - yL) / hh;
+            const xm = xL + hh / 2, ym = 0.5 * (yL + yR);
+
+            // Along the segment the polyline is straight: y is linear, y' is p.
+            const gAt = x => problem.F(x, yL + p * (x - xL), p);
+            const rect = problem.F(xm, ym, p) * hh;
+            const exact = simpson(gAt, xL, xR, 200);
+
+            // Left: the whole polyline with the segment picked out. The axes are
+            // pinned to the entire curve rather than to a window around k — let
+            // them autoscale and every segment looks like the same piece of
+            // curve, which defeats the point of moving the slider.
+            const allX = [], allY = [];
+            for (let i = 0; i <= M; i++) { allX.push(problem.a + i * hh); allY.push(yy[i]); }
+            const yLo = Math.min.apply(null, allY), yHi = Math.max.apply(null, allY);
+            const pad = 0.08 * (yHi - yLo || 1);
+            const cl = clone(BASE);
+            cl.title = { text: 'Segment ' + k + ' of ' + M, font: { size: 13 } };
+            cl.margin = { t: 40, r: 14, b: 44, l: 52 };
+            cl.showlegend = false;
+            cl.xaxis.title = { text: problem.indepName };
+            cl.yaxis.title = { text: problem.unknownName };
+            cl.xaxis.range = [problem.a, problem.b];
+            cl.yaxis.range = [yLo - pad, yHi + pad];
+            cl.xaxis.autorange = false;
+            cl.yaxis.autorange = false;
+            Plotly.react('seg-plot-curve', [
+                { x: allX, y: allY, mode: 'lines', line: { color: '#64748b', width: 1.5 } },
+                { x: [xm, xm], y: [yLo - pad, ym], mode: 'lines',
+                  line: { color: '#a855f7', width: 1.5, dash: 'dot' } },
+                { x: [xL, xR], y: [yL, yR], mode: 'lines+markers',
+                  line: { color: '#eebb22', width: 4 }, marker: { color: '#eebb22', size: 7 } },
+                { x: [xm], y: [ym], mode: 'markers', marker: { color: '#a855f7', size: 9 } }
+            ], cl, CONFIG);
+
+            // Right: the integrand along the segment, and the rectangle that
+            // replaces the area under it.
+            const gx = [], gy = [];
+            for (let i = 0; i <= 60; i++) { const xv = xL + hh * i / 60; gx.push(xv); gy.push(gAt(xv)); }
+            const gm = problem.F(xm, ym, p);
+            const rl = clone(BASE);
+            rl.title = { text: "F(x, y, y') along the segment", font: { size: 13 } };
+            rl.margin = { t: 40, r: 14, b: 44, l: 52 };
+            rl.showlegend = false;
+            rl.xaxis.title = { text: problem.indepName };
+            rl.yaxis.title = { text: 'F' };
+            const lowest = Math.min(0, Math.min.apply(null, gy));
+            rl.yaxis.range = [lowest - 0.08 * (Math.max.apply(null, gy) - lowest || 1),
+                              Math.max.apply(null, gy) + 0.12 * (Math.max.apply(null, gy) - lowest || 1)];
+            Plotly.react('seg-plot-integrand', [
+                { x: [xL, xL, xR, xR], y: [0, gm, gm, 0], fill: 'toself',
+                  fillcolor: 'rgba(238,187,34,0.22)', mode: 'lines',
+                  line: { color: '#eebb22', width: 1.5 } },
+                { x: gx, y: gy, mode: 'lines', line: { color: '#60a5fa', width: 2.5 } },
+                { x: [xm], y: [gm], mode: 'markers', marker: { color: '#a855f7', size: 10 } }
+            ], rl, CONFIG);
+
+            const num = v => (Math.abs(v) < 1e4 && Math.abs(v) >= 1e-3) || v === 0
+                ? v.toFixed(6) : v.toExponential(3);
+            $('seg-k').textContent = 'k = ' + k;
+            $('seg-nums').innerHTML =
+                [['\\(h\\)', hh], ['\\(\\bar x_k\\)', xm], ['\\(\\bar y_k\\)', ym],
+                 ['\\(p_k\\)', p], ['\\(F(\\bar x_k,\\bar y_k,p_k)\\)', gm],
+                 ['rectangle \\(=F\\cdot h\\)', rect],
+                 ['true area under \\(F\\)', exact]]
+                .map(([k2, v]) => '<div class="readout"><span class="k">' + k2 +
+                     '</span><span class="v">' + num(v) + '</span></div>').join('');
+            if (window.MathJax && MathJax.typesetPromise) {
+                MathJax.typesetPromise([$('seg-nums'), $('seg-k')]).catch(() => {});
+            }
+        }
+
+        function segSyncSliders() {
+            const sl = $('seg-slider');
+            sl.max = String(segN - 1);
+            segK = Math.min(segK, segN - 1);
+            sl.value = String(segK);
+            $('seg-n-slider').value = String(segN);
+            $('seg-n').textContent = String(segN);
+        }
+
+        const SEG_N_DEFAULT = 4;
+
+        function segOpen() {
+            running = false; syncRunButton();
+            if (raf) cancelAnimationFrame(raf);
+            // This is an explainer, not a workspace: always open at the coarse
+            // setting that makes the rectangle legible, whatever was left behind.
+            segN = SEG_N_DEFAULT;
+            segK = Math.floor(segN / 2);
+            segResample();
+            segSyncSliders();
+            $('seg-modal').classList.remove('hidden');
+            segRefresh();                       // after unhiding, so Plotly can size
+            $('seg-close').focus();
+        }
+
+        function segClose() {
+            $('seg-modal').classList.add('hidden');
+            $('seg-open').focus();
+        }
+
+        $('seg-open').addEventListener('click', segOpen);
+        $('seg-close').addEventListener('click', segClose);
+        $('seg-modal').addEventListener('click', e => {
+            if (e.target === $('seg-modal')) segClose();
+        });
+        document.addEventListener('keydown', e => {
+            if (e.key === 'Escape' && !$('seg-modal').classList.contains('hidden')) segClose();
+        });
+        $('seg-slider').addEventListener('input', e => {
+            segK = parseInt(e.target.value, 10);
+            segRefresh();
+        });
+        $('seg-n-slider').addEventListener('input', e => {
+            segN = parseInt(e.target.value, 10);
+            segK = Math.floor(segN / 2);        // keep it somewhere in the middle
+            segResample();
+            segSyncSliders();
+            segRefresh();
+        });
+
         // ── Wiring ───────────────────────────────────────────────────────────
         PROBLEMS.forEach((p, i) => {
             const o = document.createElement('option');
@@ -892,6 +1176,7 @@
             $('speed-display').textContent = String(stepsPerFrame);
             startKind = problem.start || 'line';
             $('start-select').value = startKind;
+            $('seg-open').style.display = problem.sep ? 'none' : '';
             reset();
             if (window.MathJax && MathJax.typesetPromise) {
                 MathJax.typesetPromise([$('problem-note')]).catch(() => {});
