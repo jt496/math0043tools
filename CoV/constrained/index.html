@@ -448,8 +448,26 @@
 
         <p class="note">It is a dial with a wide flat bottom rather than a knife edge. At \(N=40\) the
             chain converges in 2946 steps at \(\mu=2\), 3547 at the \(50\) this page uses, 6403 at
-            \(200\) and 26900 at \(1000\). The page uses \(50\) for the two length problems and
-            \(200\) for the dual, each comfortably inside its own basin.</p>
+            \(200\) and 26900 at \(1000\).</p>
+
+        <p>How is it chosen? By hand, once per problem, and then held fixed for the whole descent:
+            \(50\) for the two length constraints and \(200\) for the area one, each picked from a
+            sweep like that one and sitting comfortably inside its basin rather than at the very bottom.
+            There is no formula, and \(\mu\) is not dimensionless &mdash; it multiplies a squared
+            constraint violation, so a problem that fixes a length and a problem that fixes an area
+            genuinely need different numbers.</p>
+
+        <p class="note">Should it not adapt? The textbook augmented-Lagrangian method does raise
+            \(\mu\) as it runs, stiffening the penalty whenever the constraint is still violated
+            <em>after the inner minimisation has been solved</em>. That last clause is the catch: this
+            page never solves an inner problem. It descends continuously and nudges \(\lambda\) every
+            20 steps, so &ldquo;the violation did not fall much over the last 20 steps&rdquo; usually
+            means the descent has not got there yet, not that the penalty is too soft. Stiffening on
+            that signal pushes \(\mu\) up into the ill-conditioned range and makes matters worse:
+            implemented and measured, it drove \(\mu\) past \(10^4\) and failed to converge on 6 of
+            27 runs across the three problems, against 27 of 27 for the constant. Adapting \(\mu\)
+            honestly would need an inner/outer loop, and the animation would stop being one continuous
+            descent.</p>
 
         <p class="note">The 20 is the one constant here that has a sharp edge on one side. The update
             assumes the curve has had a chance to settle at the current price; update after every single
