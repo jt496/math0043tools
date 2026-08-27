@@ -311,18 +311,20 @@
         <h1>Is It a Minimum?</h1>
 
         <p>Solving the Euler&ndash;Lagrange equation gives a <strong>stationary</strong> curve, and
-            that is all it gives. Stationary has a precise meaning here: for <em>every</em> variation
-            \(\eta\) vanishing at both endpoints,</p>
+            that is all it gives.</p>
+
+        <h3>What stationary means</h3>
+        <p>It has a precise meaning. Take any variation \(\eta\) that vanishes at both endpoints, so
+            that \(y+\varepsilon\eta\) is another curve joining the same two points. Then</p>
 
         <div class="eq">
             \[ \left.\frac{d}{d\varepsilon} I[y+\varepsilon\eta]\right|_{\varepsilon=0} = 0 . \]
         </div>
 
-        <p>Every directional derivative vanishes &mdash; which is precisely what \(f'(x)=0\) says, one
-            direction at a time. And precisely as in ordinary calculus, that does not make it a minimum:
-            it could be a maximum, or the analogue of a point of inflection. The
-            <a href="../euler_lagrange/index.html" style="color: var(--accent-blue);">first
-            variation</a> is a necessary condition, not a sufficient one.</p>
+        <p>One number, zero, for each choice of \(\eta\) &mdash; and it holds for <em>every</em>
+            admissible \(\eta\), not merely some. In words: the rate at which \(I\) changes as you
+            set off from \(y\) is zero, whichever direction you set off in. Nothing beyond that is
+            being claimed.</p>
 
         <p class="note">The condition that \(\eta\) vanish at the endpoints is not a technicality: it
             says what the curve is being compared <em>with</em>. Integrating by parts leaves
@@ -330,8 +332,15 @@
             pinned endpoints that kill the first piece. Let \(\eta\) move the ends and the same
             catenary is no longer stationary.</p>
 
-        <p>So how do you tell? In one variable you look at \(f''(x)\). This page does exactly that,
-            and needs nothing beyond it.</p>
+        <h3>Why that is not enough</h3>
+        <p>In one variable the same statement is \(f'(x)=0\), and you already know what it does not
+            settle: a stationary point may be a minimum, a maximum, or neither, and the first
+            derivative alone cannot tell you which.</p>
+
+        <p>Curves are no different. The
+            <a href="../euler_lagrange/index.html" style="color: var(--accent-blue);">first
+            variation</a> is a necessary condition, not a sufficient one, and deciding between the
+            cases needs the <em>second</em> derivative. That is all this page does.</p>
 
         <h3>The test you already know</h3>
         <p>Discretise as on the
