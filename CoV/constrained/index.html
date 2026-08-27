@@ -307,12 +307,16 @@
             problem only becomes well posed once the length is fixed:</p>
 
         <div class="eq">
-            \[ J[y] = \int_a^b \sqrt{1+(y')^2}\,dx = L. \]
+            \[ J[y] = \int_a^b \sqrt{1+(y')^2}\,dx = c. \]
         </div>
+
+        <p class="note">\(c\) is the value the constraint is held at, and it is what the second slider
+            sets. It is a length for the chain and for the fence, and an area for the dual problem, so
+            rather than switch letters from problem to problem the page calls it \(c\) throughout.</p>
 
         <p class="note">Run the page with the chain and watch the top two numbers in the panel: they are
             \(I_N\) and \(J_N\), the two integrals evaluated on the polyline. \(J_N\) is pulled to
-            \(L\) and stays there; \(I_N\) drops steeply and then drifts down. It does <em>not</em> fall
+            \(c\) and stays there; \(I_N\) drops steeply and then drifts down. It does <em>not</em> fall
             at every single step &mdash; the descent minimises \(K\) below, not \(I\) on its own, so the
             energy is free to edge back up whenever the constraint hauls the chain in. It is the
             constraint, not the energy, that decides how far the chain can drop.</p>
@@ -346,33 +350,67 @@
         <h3>What the page does</h3>
         <p>Exactly as on the direct method page, the curve becomes an \(N\)-node polyline and both
             integrals become ordinary functions of the heights \(y_1,\dots,y_{N-1}\), by the midpoint
-            rule on each segment. Write \(I_N\) and \(J_N\) for those, and \(c\) for the value the
-            constraint is held at &mdash; the length \(L\), or the area \(A\), depending on the problem.
-            The descent is run not on \(K_N\) itself but on \(K_N\) with a penalty attached,</p>
+            rule on each segment. Write \(I_N\) and \(J_N\) for those. The problem is now finite:
+            minimise \(I_N\) over the heights subject to \(J_N=c\).</p>
+
+        <p>If \(\lambda\) were known there would be nothing left to do &mdash; descend
+            \(K_N=I_N-\lambda J_N\) and stop. It is not known, and that is the whole difficulty.
+            While the running guess at \(\lambda\) is wrong, descending \(K_N\) has no reason to
+            respect the constraint at all: guess too small a \(\lambda\) for the chain and length is
+            too cheap, so the curve just falls. Something has to hold it near \(J_N=c\) while
+            \(\lambda\) is still being found.</p>
+
+        <h3>The penalty</h3>
+        <p>So a penalty is attached, and the descent runs on</p>
 
         <div class="eq">
             \[ \begin{aligned}
                 K_\mu = I_N &- \lambda\,(J_N-c) \\[2pt]
-                            &+ \tfrac{\mu}{2}\,(J_N-c)^2 ,
+                            &+ \tfrac{\mu}{2}\,(J_N-c)^2 .
                \end{aligned} \]
         </div>
 
-        <p>and after every 20 steps the multiplier is nudged by</p>
+        <p>The added term is zero when the constraint holds and grows as the <em>square</em> of the
+            violation, so its gradient is a restoring pull back towards \(J_N=c\) whose strength is
+            proportional to how far off the curve has got. It is a spring rather than a wall: the curve
+            is allowed to break the constraint, but it pays for doing so, and the further out it goes
+            the harder it is pulled back.</p>
+
+        <p>Every 20 steps the multiplier is then nudged by</p>
 
         <div class="eq">
             \[ \lambda \;\longleftarrow\; \lambda - \mu\,(J_N - c). \]
         </div>
 
-        <p>Read that update in words: <em>if the curve is coming out too long, raise the price of
-            length; if it is too short, lower it.</em> The extra \(\tfrac{\mu}{2}(J_N-c)^2\) is a penalty
-            that keeps the curve near the constraint while \(\lambda\) is still wrong &mdash; without it
-            the descent would wander far off before the multiplier caught up. Both extra terms vanish at
-            the answer, where \(J_N=c\) exactly.</p>
+        <p>Read that in words: <em>if the curve is coming out too long, raise the price of length; if it
+            is too short, lower it.</em> Both added terms vanish at the answer, where \(J_N=c\) exactly,
+            so neither of them biases where the descent ends up.</p>
 
         <p class="note">\(K_\mu\) differs from \(K_N\) by \(\lambda c\), which is constant in the
             heights and so changes no derivative, plus the penalty, which vanishes at the answer. The
             curve the descent settles on is therefore a stationary point of \(K\), exactly as the
             multiplier argument above requires.</p>
+
+        <h3>What \(\mu\) is, and why 20 steps</h3>
+        <p>\(\mu>0\) is the stiffness of that spring. Notice that the <em>same</em> \(\mu\) is also
+            the step size in the \(\lambda\) update, which is not a coincidence: that update is a
+            gradient step in \(\lambda\), and taking it at the penalty's own strength is what makes the
+            curve and the multiplier converge together. One consequence is that \(\mu=0\) does not
+            merely switch the penalty off &mdash; it freezes \(\lambda\) at \(0\), and nothing is
+            ever found.</p>
+
+        <p class="note">It is a dial with a wide flat bottom rather than a knife edge. At \(N=40\) the
+            chain converges in 2946 steps at \(\mu=2\), 3547 at the \(50\) this page uses, 6403 at
+            \(200\) and 26900 at \(1000\). The page uses \(50\) for the two length problems and
+            \(200\) for the dual, each comfortably inside its own basin.</p>
+
+        <p class="note">The 20 is the one constant here that has a sharp edge on one side. The update
+            assumes the curve has had a chance to settle at the current price; update after every single
+            step and price and curve chase each other. Measured on the chain, \(\lambda\) then swings
+            between \(-21.6\) and \(+6.0\) instead of settling at \(-1.2653\), and the descent never
+            converges at all. Past that the cadence is not delicate &mdash; every 2 steps, every 20 and
+            every 200 all converge in much the same number of steps. Twenty is a comfortable margin, not
+            a tuned value.</p>
 
         <p class="note">\(\lambda\) starts at \(0\), which is to say the page starts by pretending there
             is no constraint at all. Watch the lower plot: the value it settles on is a genuine
@@ -513,7 +551,7 @@
         const PROBLEMS = [
             {
                 id: 'chain',
-                label: 'Hanging chain:  minimise ∫ y ds  subject to  ∫ ds = L',
+                label: 'Hanging chain:  minimise ∫ y ds  subject to  ∫ ds = c',
                 a: 0, b: 1, ya: 0, yb: 0,
                 objTex: '\\int_0^1 y\\sqrt{1+(y\')^2}\\,dx', objName: 'potential energy',
                 conTex: '\\int_0^1 \\sqrt{1+(y\')^2}\\,dx', conName: 'length',
@@ -528,7 +566,7 @@
                     Fp: (x, y, p) => p / Math.sqrt(1 + p * p)
                 },
                 tMin: 1.05, tMax: 3, tStep: 0.05, tDefault: 2.5,
-                tLabel: 'chain length \\(L\\)',
+                tLabel: 'chain length \\(c\\)',
                 mu: 50, speed: 15,
                 solve(L) {
                     // y = a cosh((x-1/2)/a) + c through (0,0),(1,0) with length L
@@ -566,7 +604,7 @@
             },
             {
                 id: 'dido',
-                label: 'Dido / fence:  maximise ∫ y dx  subject to  ∫ ds = L',
+                label: 'Dido / fence:  maximise ∫ y dx  subject to  ∫ ds = c',
                 a: 0, b: 1, ya: 0, yb: 0,
                 objTex: '-\\int_0^1 y\\,dx', objName: 'minus the area',
                 conTex: '\\int_0^1 \\sqrt{1+(y\')^2}\\,dx', conName: 'length',
@@ -579,7 +617,7 @@
                     Fp: (x, y, p) => p / Math.sqrt(1 + p * p)
                 },
                 tMin: 1.05, tMax: 1.3, tStep: 0.01, tDefault: 1.22,
-                tLabel: 'fence length \\(L\\)',
+                tLabel: 'fence length \\(c\\)',
                 mu: 50, speed: 8,
                 solve(L) {
                     // Circular arc, chord 1, arc length L: theta/sin(theta) = L
@@ -599,13 +637,13 @@
                          'arc &mdash; and \\(|\\lambda|\\) is its <strong>radius</strong>. The upper plot ' +
                          'draws the full circle of radius \\(|\\lambda|\\); as the descent converges the ' +
                          'polyline settles onto it.',
-                note: 'The isoperimetric problem: of all fences of length \\(L\\) spanning the same two ' +
+                note: 'The isoperimetric problem: of all fences of length \\(c\\) spanning the same two ' +
                       'points, the circular arc encloses the most. Because the page descends, it is run ' +
                       'as minimising \\(-\\!\\int y\\,dx\\).'
             },
             {
                 id: 'dual',
-                label: 'The dual:  minimise ∫ ds  subject to  ∫ y dx = A',
+                label: 'The dual:  minimise ∫ ds  subject to  ∫ y dx = c',
                 a: 0, b: 1, ya: 0, yb: 0,
                 objTex: '\\int_0^1 \\sqrt{1+(y\')^2}\\,dx', objName: 'length',
                 conTex: '\\int_0^1 y\\,dx', conName: 'area',
@@ -616,7 +654,7 @@
                 },
                 con: { F: (x, y, p) => y, Fy: () => 1, Fp: () => 0 },
                 tMin: 0.05, tMax: 0.25, tStep: 0.01, tDefault: 0.18,
-                tLabel: 'enclosed area \\(A\\)',
+                tLabel: 'enclosed area \\(c\\)',
                 mu: 200, speed: 5,
                 solve(A) {
                     const th = bisect(t => {
@@ -638,7 +676,7 @@
                          '<strong>curvature</strong> \\(1/R\\) rather than the radius. Swapping which ' +
                          'integral is the objective inverts the multiplier &mdash; worth seeing, because ' +
                          'it shows \\(\\lambda\\) carries units and is not just a fudge factor.',
-                note: 'Of all curves spanning the two points and enclosing area \\(A\\), the circular arc ' +
+                note: 'Of all curves spanning the two points and enclosing area \\(c\\), the circular arc ' +
                       'is the shortest. Compare with Dido above: same family of answers, opposite question.'
             }
         ];
@@ -676,9 +714,12 @@
         let N = 40, stepsPerFrame = 15, target = problem.tDefault;
         let y, h, st, iters = 0, running = false, stalled = false, converged = false, raf = null;
         let lamHist = [], exact = null;
-        // How often the multiplier is updated. Every step is unstable — lambda
-        // chases noise in a curve that has not settled; every 20 lets the
-        // descent make real progress at a fixed price before the price moves.
+        // How often the multiplier is updated. Updating every single step is
+        // genuinely unstable — measured on the chain, lambda swings between
+        // -21.6 and +6.0 instead of settling at -1.2653 — because the update
+        // assumes the curve has settled at the current price. Anything from 2
+        // upwards works, and 2 / 20 / 200 all converge in much the same number
+        // of steps, so this is margin rather than tuning.
         const LAM_EVERY = 20;
         // Both must hold: a curve can satisfy its constraint and still not be
         // stationary, and vice versa.
